@@ -1,0 +1,17 @@
+{
+  "name": "pptx-game-studio",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Soạn trò chơi bài giảng và xuất PowerPoint có hiệu ứng tương tác, quản lý lượt xuất bằng mã kích hoạt.",
+  "scripts": {
+    "start": "node server/server.js",
+    "codes": "node scripts/generate-codes.js",
+    "issue": "node scripts/manage-codes.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pg": "^8.13.1"
+  },
+  "engines": { "node": ">=18" }
+}

@@ -1,0 +1,5 @@
+# Không bao giờ commit mã kích hoạt thật
+output-codes/
+node_modules/
+.env
+*.log

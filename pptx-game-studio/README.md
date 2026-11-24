@@ -1,0 +1,93 @@
+# PPTX Game Studio
+
+Trang web soạn **trò chơi bài giảng** và xuất **PowerPoint (.pptx) có hiệu ứng tương tác thật**:
+Ai là triệu phú · Nhìn hình đoán chữ · Mảnh ghép bí mật · Đúng / Sai · Lật ô số.
+
+**Chạy online:** https://lddungkhtn.github.io/GOITEN/pptx-game-studio/
+
+## Điểm nổi bật
+
+- **Ưu tiên hiệu ứng thay vì nhiều slide:** mỗi trò chơi gói gọn trong **1 slide**. Cả bộ chỉ gồm
+  `số trò chơi + 2` slide (slide mở đầu dạng menu và slide kết thúc).
+- **Trigger thật trong PowerPoint:** bấm vào ô đáp án để chấm đúng/sai, nút 50:50, đồng hồ đếm giờ ⏱,
+  bấm ô "?" để mở từng chữ cái, bấm mảnh ghép / ô số → hiện câu hỏi → hiện đáp án → lật mảnh.
+- **Menu có liên kết:** slide mở đầu có danh sách trò chơi bấm để nhảy tới; mỗi slide có nút ⌂ quay về menu.
+- **Hiệu ứng mượt:** zoom, float-in, fade, wipe, pulse + chuyển slide (fade/push/zoom/cover/wipe). Chỉ dùng hiệu
+  ứng chuẩn của PowerPoint 2010 trở lên nên chạy ổn định, file nhẹ.
+- **Xem trước giống hệt PowerPoint:** trang web dùng chung một mô tả cảnh với bộ xuất PPTX, có thể bấm thử
+  trigger ngay trên trang, và có chế độ **⛶ Trình chiếu** toàn màn hình trên trình duyệt.
+- Ghi chú người dẫn (speaker notes) hướng dẫn cách chơi ở từng slide.
+
+## Cấu trúc
+
+```text
+pptx-game-studio/
+├── index.html            # Giao diện (không cần build)
+├── config.js             # Cấu hình backend (DEMO / Supabase / API Node)
+├── css/app.css
+├── js/
+│   ├── scenes.js         # Mô tả 5 dạng trò chơi thành "cảnh" (hình + hiệu ứng + trigger)
+│   ├── player.js         # Trình phát HTML (xem trước / trình chiếu online)
+│   ├── pptx-export.js    # Xuất PPTX bằng PptxGenJS + chèn XML animation/trigger/transition
+│   ├── backend.js        # Lượt xuất & mã kích hoạt (demo / supabase / api)
+│   ├── samples.js        # Bộ câu hỏi mẫu
+│   └── app.js            # Logic giao diện soạn bài
+├── vendor/               # pptxgenjs 3.12.0, jszip 3.10.1 (đóng gói sẵn, không phụ thuộc CDN)
+├── server/
+│   ├── schema.sql        # Bảng + stored function (PostgreSQL / Supabase)
+│   └── server.js         # API Node.js (tùy chọn)
+├── scripts/
+│   ├── generate-codes.js # Sinh mã kích hoạt hàng loạt (.json/.csv/.sql)
+│   └── manage-codes.js   # Cấp mã cho khách
+└── HANDOVER_PLAN.md      # Kế hoạch bàn giao gốc
+```
+
+## Bật hệ thống mã kích hoạt online (Supabase – miễn phí)
+
+1. Tạo tài khoản và project tại https://supabase.com.
+2. Vào **SQL Editor → New query**, dán toàn bộ `server/schema.sql` → **Run**.
+3. Vào **Project Settings → API**, chép **Project URL** và khóa **anon / publishable**.
+4. Mở `config.js`, điền `SUPABASE_URL` và `SUPABASE_ANON_KEY` rồi đẩy lên GitHub.
+   (Chỉ dùng khóa *anon*; **không bao giờ** dán khóa `service_role`.)
+5. Trang tự chuyển sang chế độ máy chủ ("● Đang kết nối máy chủ").
+
+Người dùng mới được 2 lượt dùng thử (đổi trong `schema.sql`, cột `remaining_exports DEFAULT 2`).
+
+## Tạo và bán mã kích hoạt
+
+```bash
+# Tạo 50 mã, mỗi mã cộng 30 lượt, hết hạn cuối 2027
+node scripts/generate-codes.js -n 50 -c 30 -p SLIDE30 -e 2027-12-31
+# → output-codes/*.sql : dán vào Supabase SQL Editor và Run để nạp mã vào CSDL
+
+# Cấp 2 mã cho khách, xuất file .txt để gửi
+node scripts/manage-codes.js -i output-codes/SLIDE30-....json -n 2 -c "Cô Lan - THCS A" --note "CK 20k Momo"
+node scripts/manage-codes.js -i output-codes/SLIDE30-....json --stats
+```
+
+Thư mục `output-codes/` đã được chặn trong `.gitignore` — **không đưa mã thật lên GitHub**.
+
+## Server Node.js (tùy chọn, thay cho Supabase trực tiếp)
+
+```bash
+npm install
+DATABASE_URL=postgres://... ALLOW_ORIGIN=https://lddungkhtn.github.io npm start
+```
+Trong `config.js` đặt `BACKEND: 'api'` và `API_BASE` là địa chỉ server.
+Endpoint: `GET /api/balance`, `POST /api/redeem-code`, `POST /api/consume-export`.
+
+## Nguyên tắc tính lượt
+
+- Mỗi lần bấm xuất file hợp lệ = trừ 1 lượt (không phụ thuộc số slide / số trò chơi).
+- Không trừ lượt khi chưa chọn mục nào, khi soạn bài, xem trước hay trình chiếu trên web.
+- File được tạo xong mới trừ lượt; lỗi tạo file thì không trừ.
+- Số dư lượt và danh sách mã chỉ nằm trong CSDL; trình duyệt chỉ giữ mã thiết bị ngẫu nhiên.
+- Chế độ DEMO (khi chưa cấu hình Supabase) lưu lượt trên trình duyệt — chỉ để dùng thử.
+
+## Giới hạn đã biết
+
+- Việc tạo file diễn ra trên trình duyệt, nên người rành kỹ thuật vẫn có thể tự chạy mã JavaScript để
+  tạo file mà không qua bước trừ lượt. Muốn chặn hoàn toàn cần chuyển bước tạo PPTX lên máy chủ.
+- Mã thiết bị lưu trong trình duyệt: xóa dữ liệu trình duyệt sẽ thành "thiết bị mới" (được lượt dùng thử
+  mới, nhưng lượt đã nạp gắn với mã thiết bị cũ).
+- Font dùng Segoe UI (có sẵn trên Windows). Mở trên máy Mac, PowerPoint sẽ thay bằng font tương đương.

@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>PPTX Game Studio</title>
+<meta name="description" content="Soạn trò chơi bài giảng (Ai là triệu phú, Nhìn hình đoán chữ, Mảnh ghép, Đúng/Sai, Lật ô số) và xuất PowerPoint có hiệu ứng tương tác.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%234f46e5'/%3E%3Cpath d='M20 18h16a10 10 0 0 1 0 20h-8v8h-8z' fill='%23fff'/%3E%3Ccircle cx='44' cy='46' r='6' fill='%23fde047'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <div class="logo">P</div>
+    <div>
+      <h1>PPTX Game Studio</h1>
+      <p class="tag">Soạn trò chơi bài giảng • Xuất PowerPoint có hiệu ứng tương tác</p>
+    </div>
+  </div>
+  <div class="actions">
+    <span class="user-badge" id="userBadge" title="Mã thiết bị của bạn">👤 <b id="userId">…</b></span>
+    <button class="btn ghost" id="btnSample" title="Tải bộ câu hỏi mẫu 5 trò chơi">✨ Mẫu thử</button>
+    <button class="btn ghost" id="btnOpen" title="Mở file nháp .json">📂 Mở nháp</button>
+    <button class="btn ghost" id="btnSave" title="Lưu file nháp .json về máy">💾 Lưu nháp</button>
+    <button class="btn ghost" id="btnPresent" title="Trình chiếu ngay trên trình duyệt">⛶ Trình chiếu</button>
+    <button class="btn primary" id="btnExport">⬇ Xuất PowerPoint (.pptx)</button>
+    <input type="file" id="fileDraft" accept=".json,application/json" hidden>
+  </div>
+</header>
+
+<main class="layout">
+  <section class="panel left">
+    <div class="card credits">
+      <div class="credit-row">
+        <div>
+          <div class="muted small">Lượt xuất còn lại</div>
+          <div class="credit-badge" id="creditBadge"><span id="creditNum">…</span> lượt</div>
+        </div>
+        <button class="btn" id="btnRedeem">🎟️ Nhập mã kích hoạt</button>
+      </div>
+      <div class="mode-note" id="modeNote"></div>
+    </div>
+
+    <div class="card">
+      <label class="field"><span>Tên bài / chủ đề</span><input id="pTitle" maxlength="120" placeholder="VD: Ôn tập Khoa học tự nhiên 6"></label>
+      <label class="field"><span>Dòng phụ (tùy chọn)</span><input id="pSub" maxlength="140" placeholder="VD: Lớp 6A • Tiết 12"></label>
+    </div>
+
+    <div class="card">
+      <div class="list-head">
+        <h2>Danh sách trò chơi</h2>
+        <div class="sel-tools">
+          <button class="link" id="selAll">Chọn tất cả</button>
+          <span>·</span>
+          <button class="link" id="selNone">Bỏ chọn tất cả</button>
+        </div>
+      </div>
+      <div class="sel-count" id="selCount">Đã chọn: 0/0 mục xuất PPTX</div>
+      <ol class="items" id="itemList"></ol>
+      <div class="add-row">
+        <select id="addType" aria-label="Chọn dạng trò chơi">
+          <option value="millionaire">💰 Ai là triệu phú</option>
+          <option value="picture">🖼️ Nhìn hình đoán chữ</option>
+          <option value="puzzle">🧩 Mảnh ghép bí mật</option>
+          <option value="truefalse">⚖️ Đúng / Sai</option>
+          <option value="tiles">🔢 Lật ô số</option>
+        </select>
+        <button class="btn primary" id="btnAdd">＋ Thêm trò chơi / câu hỏi mới</button>
+      </div>
+    </div>
+
+    <div class="card editor" id="editor"></div>
+  </section>
+
+  <section class="panel right">
+    <div class="card preview-card">
+      <div class="pv-head">
+        <div>
+          <h2 id="pvTitle">Xem trước</h2>
+          <div class="muted small" id="pvInfo">Slide 16:9 — giống hệt khi trình chiếu PowerPoint</div>
+        </div>
+        <div class="pv-ctrl">
+          <button class="btn sm ghost" id="pvPrev" title="Slide trước">◀</button>
+          <button class="btn sm ghost" id="pvReplay" title="Phát lại hiệu ứng">↺ Phát lại</button>
+          <button class="btn sm" id="pvNext" title="Bấm tiếp (như bấm chuột khi trình chiếu)">Bấm tiếp ▶</button>
+        </div>
+      </div>
+      <div class="pv-stage" id="pvStage"></div>
+      <div class="chips" id="pvChips"></div>
+      <div class="tips">
+        <b>Mẹo:</b> Bấm thử trực tiếp vào các ô đáp án, ô số, mảnh ghép, nút ⏱ và 50:50 trên slide — các hiệu ứng trigger này
+        hoạt động y hệt trong file PowerPoint. Bấm vào nền slide (hoặc phím →) để chạy bước tiếp theo.
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer class="foot">PPTX Game Studio • Mỗi lần xuất file hợp lệ trừ 1 lượt (không phụ thuộc số slide) • Soạn bài và xem trước miễn phí</footer>
+
+<!-- Modal nạp mã -->
+<div class="modal" id="mRedeem" hidden>
+  <div class="dialog">
+    <h3>🎟️ Nhập mã kích hoạt</h3>
+    <p class="muted">Nhập mã để cộng thêm lượt xuất PowerPoint. Mỗi mã chỉ dùng được một lần.</p>
+    <input id="codeInput" class="code-input" placeholder="VD: SLIDE30-7K9M2X" autocomplete="off" spellcheck="false" maxlength="40">
+    <div class="msg" id="redeemMsg"></div>
+    <p class="muted small" id="contactNote"></p>
+    <div class="dlg-actions">
+      <button class="btn ghost" data-close>Đóng</button>
+      <button class="btn primary" id="btnDoRedeem">Nạp lượt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal xác nhận / thông báo -->
+<div class="modal" id="mConfirm" hidden>
+  <div class="dialog">
+    <h3 id="cfTitle"></h3>
+    <div id="cfBody" class="cf-body"></div>
+    <div class="dlg-actions">
+      <button class="btn ghost" id="cfNo">Quay lại</button>
+      <button class="btn primary" id="cfYes">Đồng ý</button>
+    </div>
+  </div>
+</div>
+
+<!-- Đang xử lý -->
+<div class="modal busy" id="mBusy" hidden><div class="dialog"><div class="spinner"></div><div id="busyText">Đang tạo file PowerPoint…</div></div></div>
+
+<!-- Trình chiếu toàn màn hình -->
+<div class="presenter" id="presenter" hidden>
+  <div class="pr-stage" id="prStage"></div>
+  <div class="pr-bar">
+    <button id="prPrev" title="Slide trước (←)">◀</button>
+    <span id="prInfo"></span>
+    <button id="prNext" title="Bấm tiếp (→ / Space)">▶</button>
+    <button id="prClose" title="Thoát (Esc)">✕</button>
+  </div>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script src="vendor/jszip.min.js"></script>
+<script src="vendor/pptxgen.bundle.js"></script>
+<script src="config.js"></script>
+<script src="js/backend.js"></script>
+<script src="js/scenes.js"></script>
+<script src="js/player.js"></script>
+<script src="js/pptx-export.js"></script>
+<script src="js/samples.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
