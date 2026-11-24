@@ -145,6 +145,7 @@
       case 'puzzle': return it.keyword ? `Từ khóa: ${it.keyword} • ${it.pieceCount} mảnh` : `${it.pieceCount} mảnh ghép`;
       case 'truefalse': return it.statement;
       case 'tiles': return `${(it.cells || []).length} ô số • ${it.title || ''}`;
+      case 'obstacle': return `${(it.steps || []).length} chướng ngại vật • ${it.title || ''}`;
     }
     return '';
   }
@@ -170,6 +171,9 @@
         break;
       case 'tiles':
         if ((it.cells || []).some((c) => blank(c.question))) w.push('còn ô số chưa có câu hỏi');
+        break;
+      case 'obstacle':
+        if ((it.steps || []).some((c) => blank(c.question))) w.push('còn chướng ngại vật chưa có câu hỏi');
         break;
     }
     return w;
@@ -273,15 +277,18 @@
         h += `<div class="field"><span>Kết luận</span><div class="seg" data-seg="isTrue"><button data-v="true" class="${it.isTrue !== false ? 'on' : ''}">✔ ĐÚNG</button><button data-v="false" class="${it.isTrue === false ? 'on' : ''}">✘ SAI</button></div></div>`;
         h += txt('Giải thích', 'explanation', it.explanation, { multi: true, rows: 2 }) + timerSel(it);
         break;
-      case 'tiles':
-        h += txt('Tiêu đề bảng', 'title', it.title, { max: 100 });
+      case 'tiles': case 'obstacle': {
+        const key = it.type === 'tiles' ? 'cells' : 'steps', min = it.type === 'tiles' ? 4 : 3;
+        const unit = it.type === 'tiles' ? 'Ô số' : 'Chướng ngại vật';
+        h += txt(it.type === 'tiles' ? 'Tiêu đề bảng' : 'Tiêu đề / lời dẫn', 'title', it.title, { max: 100 });
         h += '<div class="sub-list">';
-        it.cells.forEach((c, k) => {
-          h += `<div class="sub"><div class="sub-h">Ô số ${k + 1}${it.cells.length > 4 ? `<button class="link" data-cell-del="${k}">Xóa ô</button>` : ''}</div>
-            ${txt('Câu hỏi', `cells.${k}.question`, c.question, { multi: true, rows: 2 })}${txt('Đáp án', `cells.${k}.answer`, c.answer, { max: 120 })}</div>`;
+        it[key].forEach((c, k) => {
+          h += `<div class="sub"><div class="sub-h">${unit} ${k + 1}${it[key].length > min ? `<button class="link" data-cell-del="${k}">Xóa</button>` : ''}</div>
+            ${txt('Câu hỏi', `${key}.${k}.question`, c.question, { multi: true, rows: 2 })}${txt('Đáp án', `${key}.${k}.answer`, c.answer, { max: 120 })}</div>`;
         });
-        h += `</div>${it.cells.length < 8 ? '<button class="btn sm" style="margin:10px 0" data-cell-add>＋ Thêm ô số</button>' : ''}<p class="hint">Từ 4 đến 8 ô số.</p>` + timerSel(it);
+        h += `</div>${it[key].length < 8 ? `<button class="btn sm" style="margin:10px 0" data-cell-add>＋ Thêm ${unit.toLowerCase()}</button>` : ''}<p class="hint">Từ ${min} đến 8 ${unit.toLowerCase()}.${it.type === 'obstacle' ? ' Nhân vật vượt lần lượt từng chướng ngại để về đích.' : ''}</p>` + timerSel(it);
         break;
+      }
     }
     box.innerHTML = h;
   }
@@ -304,8 +311,9 @@
       if (key === 'isTrue') v = v === 'true';
       it[key] = v; changed({ editor: true }); return;
     }
-    if ('cellAdd' in e.target.dataset) { if (it.cells.length < 8) it.cells.push({ question: '', answer: '' }); changed({ editor: true }); return; }
-    if (e.target.dataset.cellDel != null) { it.cells.splice(+e.target.dataset.cellDel, 1); changed({ editor: true }); return; }
+    const listKey = it.type === 'obstacle' ? 'steps' : 'cells';
+    if ('cellAdd' in e.target.dataset) { if (it[listKey].length < 8) it[listKey].push({ question: '', answer: '' }); changed({ editor: true }); return; }
+    if (e.target.dataset.cellDel != null) { it[listKey].splice(+e.target.dataset.cellDel, 1); changed({ editor: true }); return; }
     const im = e.target.dataset.img;
     if (im === 'pick') { $('#imgFile').click(); return; }
     if (im === 'clear') { it.image = ''; changed({ editor: true }); return; }
@@ -397,14 +405,21 @@
     if (credits === 0) { openRedeem('Bạn đã hết lượt xuất PPTX. Vui lòng nhập mã kích hoạt để nạp thêm lượt.'); return; }
     const slides = items.length + 2;
     if (!(await confirmDlg('Xuất PowerPoint', `<p>Xuất <b>${items.length}</b> trò chơi thành <b>${slides} slide</b> có hiệu ứng tương tác.</p>
+      <label class="opt-row"><input type="checkbox" id="optProtect" checked><span><b>🔒 Khóa nội dung (khuyên dùng)</b><br><span class="muted">Chữ và hình được chuyển thành ảnh, khóa không cho di chuyển/sửa — người nhận file không sửa được câu hỏi hay sao chép bố cục để tự làm lại. Hiệu ứng, trigger, âm thanh vẫn chạy bình thường.</span></span></label>
+      <label class="opt-row"><input type="checkbox" id="optSound" checked><span><b>🔊 Kèm hiệu ứng âm thanh</b></span></label>
       <p>Thao tác này trừ <b>1 lượt xuất</b>${credits != null ? ` (hiện còn ${credits})` : ''}.</p>`, 'Xuất file'))) return;
+    const protect = !!($('#optProtect') && $('#optProtect').checked);
+    const sound = !!($('#optSound') && $('#optSound').checked);
     busy(true, 'Đang chuẩn bị hình ảnh…');
     try {
       const prepared = [];
       for (const it of items) prepared.push(await prepItem(it));
       const deck = GS.buildDeck(Object.assign({}, project, { items: prepared }));
-      busy(true, 'Đang tạo PowerPoint có hiệu ứng…');
-      const blob = await window.PptxExporter.exportDeck(deck, { PptxGenJS: window.PptxGenJS, JSZip: window.JSZip });
+      busy(true, protect ? 'Đang khóa nội dung và tạo PowerPoint…' : 'Đang tạo PowerPoint có hiệu ứng…');
+      const blob = await window.PptxExporter.exportDeck(deck, { PptxGenJS: window.PptxGenJS, JSZip: window.JSZip, Sounds: window.GSSounds }, {
+        protect, sound, rasterize: window.GSRaster && window.GSRaster.rasterizeSlide,
+        onProgress: (i, n) => busy(true, `Đang khóa nội dung slide ${i + 1}/${n}…`)
+      });
       busy(true, 'Đang xác nhận lượt xuất…');
       const r = await B.consume(items.length, deck.slides.length);
       if (typeof r.remainingExports === 'number') setCredits(r.remainingExports);
@@ -416,6 +431,97 @@
       console.error(e); busy(false);
       toast('Lỗi khi xuất file: ' + e.message, 'bad');
     }
+  }
+
+  /* ================= nhập câu hỏi từ Word / ảnh ================= */
+  const imp = { images: [], result: null };
+  const KIND = { mcq: ['Trắc nghiệm', ''], tf: ['Đúng/Sai', 'tf'], short: ['Tự luận ngắn', 'short'] };
+  function impStatus(html) { $('#impStatus').innerHTML = html || ''; }
+  function openImport() { $('#mImport').hidden = false; impAnalyze(); }
+  async function impFiles(files) {
+    files = Array.from(files || []);
+    if (!files.length) return;
+    let added = '';
+    for (const f of files) {
+      const name = f.name || 'file';
+      try {
+        if (/\.docx$/i.test(name) || /wordprocessingml/.test(f.type)) {
+          impStatus(`Đang đọc <b>${esc(name)}</b>…`);
+          const r = await window.GSImporter.readDocx(f, window.JSZip);
+          const off = imp.images.length;
+          imp.images.push(...r.images);
+          added += '\n' + r.text.replace(/\[Ảnh (\d+)\]/g, (m, n) => `[Ảnh ${+n + off}]`) + '\n';
+        } else if (/^image\//.test(f.type)) {
+          impStatus(`Đang nhận dạng chữ trong <b>${esc(name)}</b>… (lần đầu cần tải bộ nhận dạng tiếng Việt, vui lòng chờ)`);
+          const text = await window.GSImporter.ocrImage(f, (st, p) => {
+            const lb = /recogniz/i.test(st) ? 'Đang nhận dạng chữ' : /load|initializ/i.test(st) ? 'Đang tải bộ nhận dạng tiếng Việt' : 'Đang xử lý';
+            impStatus(`${lb} – <b>${esc(name)}</b> ${Math.round(p * 100)}%<div class="bar"><i style="width:${Math.round(p * 100)}%"></i></div>`);
+          });
+          added += '\n' + text + '\n';
+        } else if (/\.doc$/i.test(name)) {
+          toast(`"${name}" là Word bản cũ (.doc). Hãy mở bằng Word và Lưu thành .docx rồi chọn lại.`, 'bad');
+        } else toast(`Không hỗ trợ file "${name}". Hãy dùng .docx hoặc ảnh.`, 'bad');
+      } catch (e) { console.error(e); toast(`Không đọc được "${name}": ${e.message}`, 'bad'); }
+    }
+    if (added.trim()) {
+      const ta = $('#impText');
+      ta.value = (ta.value.trim() ? ta.value.trim() + '\n\n' : '') + added.trim();
+      impStatus(`✔ Đã đọc xong. Kiểm tra nội dung bên dưới (sửa nếu nhận dạng sai) rồi bấm “Thêm vào bài”.`);
+    } else impStatus('');
+    impAnalyze();
+  }
+  function impAnalyze() {
+    const text = $('#impText').value;
+    const box = $('#impPreview');
+    if (!text.trim()) { box.innerHTML = ''; $('#impAdd').disabled = true; imp.result = null; return; }
+    const qs = window.GSImporter.parseText(text, imp.images);
+    const target = $('#impTarget').value;
+    const r = window.GSImporter.toItems(qs, target, GS.newItem);
+    imp.result = r;
+    const cnt = (k) => qs.filter((q) => q.kind === k).length;
+    const made = {};
+    r.items.forEach((i) => { made[i.type] = (made[i.type] || 0) + 1; });
+    const madeTxt = Object.keys(made).map((t) => `${made[t]} ${GS.GAME_TYPES[t].label}`).join(', ');
+    box.innerHTML = `<div class="sum">Tìm thấy ${qs.length} câu: ${cnt('mcq')} trắc nghiệm, ${cnt('tf')} đúng/sai, ${cnt('short')} tự luận ngắn
+      ${r.items.length ? `→ sẽ tạo <span style="color:var(--ac)">${esc(madeTxt)}</span>` : ''}</div>
+      ${r.skipped.length ? `<div class="muted small">⚠ ${r.skipped.length} câu không phù hợp dạng đã chọn nên bị bỏ qua${target === 'picture' ? ' (dạng này cần câu hỏi có ảnh trong file Word)' : ''}.</div>` : ''}
+      <ol>${qs.map((q) => `<li><span class="badge ${KIND[q.kind][1]}">${KIND[q.kind][0]}</span>${q.answerKnown ? '' : '<span class="badge warn">chưa rõ đáp án</span>'}${q.image ? '<span class="badge">có ảnh</span>' : ''}
+        ${esc(q.text.slice(0, 110))}${q.text.length > 110 ? '…' : ''}
+        <span class="muted"> → ${esc(q.kind === 'mcq' ? 'ABCD'[q.correct] + '. ' + q.options[q.correct] : q.kind === 'tf' ? (q.isTrue ? 'Đúng' : 'Sai') : q.answer || '?')}</span></li>`).join('')}</ol>
+      ${!qs.length ? '<div class="muted">Chưa nhận ra câu hỏi nào. Hãy trình bày theo mẫu “Câu 1: …”, “A. … B. …”, “Đáp án: …”.</div>' : ''}`;
+    $('#impAdd').disabled = !r.items.length;
+    $('#impAdd').textContent = r.items.length ? `＋ Thêm ${r.items.length} trò chơi vào bài` : '＋ Thêm vào bài';
+  }
+  function impAdd() {
+    if (!imp.result || !imp.result.items.length) return;
+    const items = imp.result.items;
+    project.items.push(...items);
+    selectedId = items[0].id;
+    $('#mImport').hidden = true;
+    $('#impText').value = ''; imp.images = []; imp.result = null; impStatus(''); $('#impPreview').innerHTML = '';
+    changed({ editor: true, animate: true });
+    toast(`Đã thêm ${items.length} trò chơi. Kiểm tra lại các mục có dấu ⚠ nếu có.`, 'ok');
+  }
+  function bindImport() {
+    $('#btnImport').onclick = openImport;
+    $('#impFile').onchange = (e) => { const f = e.target.files; impFiles(f).finally(() => { e.target.value = ''; }); };
+    const dz = $('#dropZone');
+    ['dragenter', 'dragover'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.add('over'); }));
+    ['dragleave', 'drop'].forEach((ev) => dz.addEventListener(ev, (e) => { e.preventDefault(); dz.classList.remove('over'); }));
+    dz.addEventListener('drop', (e) => impFiles(e.dataTransfer.files));
+    let t;
+    $('#impText').addEventListener('input', () => { clearTimeout(t); t = setTimeout(impAnalyze, 300); });
+    $('#impTarget').onchange = impAnalyze;
+    $('#impAdd').onclick = impAdd;
+  }
+
+  /* ================= âm thanh ================= */
+  function bindSound() {
+    let m = false;
+    try { m = localStorage.getItem('gs_muted') === '1'; } catch (e) { /* bỏ qua */ }
+    const apply = () => { window.GSSounds.setMuted(m); $('#btnSound').textContent = m ? '🔇' : '🔊'; $('#btnSound').title = m ? 'Đang tắt âm thanh – bấm để bật' : 'Đang bật âm thanh – bấm để tắt'; };
+    $('#btnSound').onclick = () => { m = !m; try { localStorage.setItem('gs_muted', m ? '1' : '0'); } catch (e) { /* bỏ qua */ } apply(); if (!m) window.GSSounds.play('pop'); };
+    apply();
   }
 
   /* ================= khởi động ================= */
@@ -486,7 +592,7 @@
 
   async function init() {
     player = new window.GamePlayer($('#pvStage'), { onChange: onPvChange });
-    bind(); renderMode(); refreshCredits();
+    bind(); bindImport(); bindSound(); renderMode(); refreshCredits();
     let saved = null;
     try { saved = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null'); } catch (e) { saved = null; }
     if (saved && Array.isArray(saved.items) && saved.items.length) {

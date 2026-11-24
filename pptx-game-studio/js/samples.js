@@ -70,7 +70,14 @@
       { question: 'Quá trình nước chuyển từ thể lỏng sang thể hơi gọi là gì?', answer: 'Sự bay hơi' },
       { question: 'Hơi nước gặp lạnh chuyển thành nước lỏng gọi là gì?', answer: 'Sự ngưng tụ' },
       { question: 'Nước tồn tại ở những thể nào?', answer: 'Rắn, lỏng, khí' }] });
-    return { title: 'Ôn tập Khoa học tự nhiên', subtitle: '5 trò chơi tương tác • Bấm vào tên trò chơi để bắt đầu', items: [a, b, c, d, e] };
+    const f = N('obstacle');
+    Object.assign(f, { title: 'Chinh phục Hệ Mặt Trời – vượt 5 chướng ngại để về đích!', timer: 20, steps: [
+      { question: 'Hệ Mặt Trời có bao nhiêu hành tinh?', answer: '8 hành tinh' },
+      { question: 'Hành tinh lớn nhất trong Hệ Mặt Trời là gì?', answer: 'Sao Mộc' },
+      { question: 'Hành tinh nào được gọi là “Hành tinh Đỏ”?', answer: 'Sao Hỏa' },
+      { question: 'Vệ tinh tự nhiên của Trái Đất là gì?', answer: 'Mặt Trăng' },
+      { question: 'Hành tinh nào có vành đai rõ và đẹp nhất?', answer: 'Sao Thổ' }] });
+    return { title: 'Ôn tập Khoa học tự nhiên', subtitle: '6 trò chơi tương tác • Bấm vào tên trò chơi để bắt đầu', items: [a, b, c, d, e, f] };
   }
 
   root.GSSamples = { sampleProject };

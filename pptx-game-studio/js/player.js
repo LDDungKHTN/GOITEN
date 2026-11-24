@@ -33,6 +33,11 @@
     timerOut: [{ clipPath: 'inset(0 0 0 0)' }, { clipPath: 'inset(0 100% 0 0)' }],
     pulse: [{ transform: 'scale(1)' }, { transform: 'scale(1.13)' }, { transform: 'scale(1)' }]
   };
+  const WIPE = {
+    right: [{ clipPath: 'inset(0 0 0 100%)' }, { clipPath: 'inset(0 0 0 0)' }],
+    up: [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0 0)' }],
+    down: [{ clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0 0 0 0)' }]
+  };
   const EASE = { zoomIn: 'cubic-bezier(.2,1.25,.4,1)', floatIn: 'cubic-bezier(.15,.85,.3,1)', zoomOut: 'cubic-bezier(.5,0,.9,.4)', timerOut: 'linear', pulse: 'ease-in-out' };
 
   class Player {
@@ -50,6 +55,7 @@
 
     _clear() {
       this.timers.forEach(clearTimeout); this.timers = [];
+      if (root.GSSounds) root.GSSounds.stopAll();
       this.anims.forEach((a) => { try { a.cancel(); } catch (e) { /* bỏ qua */ } }); this.anims = [];
     }
 
@@ -166,8 +172,11 @@
       const isIn = ENTR.has(e.type), isOut = EXIT.has(e.type);
       if (isIn) n.o.style.visibility = 'visible';
       if (instant) { if (isOut) n.o.style.visibility = 'hidden'; return; }
-      if (!KF[e.type]) return;
-      const a = n.a.animate(KF[e.type], { duration: Math.max(1, e.dur), easing: EASE[e.type] || 'ease-out' });
+      if (e.snd && root.GSSounds && this.opts.sound !== false) root.GSSounds.play(e.snd);
+      let kf = KF[e.type];
+      if (e.type === 'wipeIn' && e.dir && e.dir !== 'left') kf = WIPE[e.dir];
+      if (!kf) return;
+      const a = n.a.animate(kf, { duration: Math.max(1, e.dur), easing: EASE[e.type] || 'ease-out' });
       this.anims.push(a);
       if (isOut) {
         n.o.style.visibility = 'visible';

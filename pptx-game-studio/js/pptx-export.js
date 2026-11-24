@@ -57,8 +57,18 @@
   /* ---------- XML hiệu ứng ---------- */
   // Mỗi hiệu ứng trên cùng 1 hình phải có grpId riêng (0,1,2…) và 1 dòng <p:bldP> tương ứng,
   // nếu trùng PowerPoint sẽ âm thầm bỏ hiệu ứng.
-  function TimingBuilder() { this.id = 1; this.grp = new Map(); this.bld = []; }
+  function TimingBuilder() { this.id = 1; this.grp = new Map(); this.bld = []; this.snds = new Map(); }
   TimingBuilder.prototype.nid = function () { return ++this.id; };
+  // âm thanh gắn vào hiệu ứng: <p:audio> trỏ tới file .wav trong ppt/media
+  // (cấu trúc lấy đúng theo file PowerPoint tự lưu: <p:subTnLst> nằm sau <p:childTnLst> của hiệu ứng)
+  TimingBuilder.prototype.audio = function (name, effectId) {
+    if (!this.snds.has(name)) this.snds.set(name, `rIdGSnd${this.snds.size + 1}`);
+    const rid = this.snds.get(name);
+    return `<p:subTnLst><p:audio><p:cMediaNode><p:cTn display="0" masterRel="sameClick"><p:stCondLst><p:cond evt="begin" delay="0"><p:tn val="${effectId}"/></p:cond></p:stCondLst>` +
+      '<p:endCondLst><p:cond evt="onStopAudio" delay="0"><p:tgtEl><p:sldTgt/></p:tgtEl></p:cond></p:endCondLst></p:cTn>' +
+      `<p:tgtEl><p:sndTgt r:embed="${rid}" name="${name}.wav"/></p:tgtEl></p:cMediaNode></p:audio></p:subTnLst>`;
+  };
+  const WIPE_SUB = { left: 8, right: 2, up: 1, down: 4 };
 
   TimingBuilder.prototype.effect = function (e, spid, nodeType, isPic) {
     const grpId = this.grp.get(spid) || 0;
@@ -80,7 +90,7 @@
         inner = setVis('visible', 0) + prop('ppt_w', 0, '#ppt_w', dur) + prop('ppt_h', 0, '#ppt_h', dur) + fx('in', 'fade', dur); extra = ' decel="50000"'; break;
       case 'floatIn': preset = 42; cls = 'entr';
         inner = setVis('visible', 0) + fx('in', 'fade', dur) + prop('ppt_x', '#ppt_x', '#ppt_x', dur) + prop('ppt_y', '#ppt_y+.1', '#ppt_y', dur); extra = ' decel="100000"'; break;
-      case 'wipeIn': preset = 22; cls = 'entr'; sub = 8; inner = setVis('visible', 0) + fx('in', 'wipe(left)', dur); break;
+      case 'wipeIn': { const d = WIPE_SUB[e.dir] ? e.dir : 'left'; preset = 22; cls = 'entr'; sub = WIPE_SUB[d]; inner = setVis('visible', 0) + fx('in', `wipe(${d})`, dur); break; }
       case 'fadeOut': preset = 10; cls = 'exit'; inner = fx('out', 'fade', dur) + setVis('hidden', dur - 1); break;
       case 'zoomOut': preset = 53; cls = 'exit'; sub = 32; extra = ' accel="50000"';
         inner = prop('ppt_w', '#ppt_w', 0, dur) + prop('ppt_h', '#ppt_h', 0, dur) + fx('out', 'fade', dur) + setVis('hidden', dur - 1); break;
@@ -89,7 +99,8 @@
         inner = `<p:animScale><p:cBhvr><p:cTn id="${self.nid()}" dur="${Math.round(dur / 2)}" autoRev="1" fill="hold"/>${tgt}</p:cBhvr><p:by x="113000" y="113000"/></p:animScale>`; break;
       default: return '';
     }
-    return `<p:par><p:cTn id="${oid}" presetID="${preset}" presetClass="${cls}" presetSubtype="${sub}"${extra} fill="hold" grpId="${grpId}" nodeType="${nodeType}"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>${inner}</p:childTnLst></p:cTn></p:par>`;
+    const snd = e.snd ? this.audio(e.snd, oid) : '';
+    return `<p:par><p:cTn id="${oid}" presetID="${preset}" presetClass="${cls}" presetSubtype="${sub}"${extra} fill="hold" grpId="${grpId}" nodeType="${nodeType}"><p:stCondLst><p:cond delay="0"/></p:stCondLst><p:childTnLst>${inner}</p:childTnLst>${snd}</p:cTn></p:par>`;
   };
 
   /** Các hiệu ứng trong 1 lần bấm, nhóm theo thời điểm bắt đầu (delay). */
@@ -118,7 +129,7 @@
     const tb = new TimingBuilder();
     const main = sd.main.filter((g) => g.effects.some((e) => ids[e.target] != null));
     const trig = sd.triggers.filter((t) => ids[t.on] != null && t.effects.some((e) => ids[e.target] != null));
-    if (!main.length && !trig.length) return '';
+    if (!main.length && !trig.length) return { xml: '', snds: tb.snds };
     let body = '';
     if (main.length) {
       const mainId = tb.nid(); // = 2
@@ -144,7 +155,29 @@
         `</p:childTnLst></p:cTn><p:nextCondLst>${clk}</p:nextCondLst></p:seq>`;
     });
     const bld = tb.bld.join('');
-    return `<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>${body}</p:childTnLst></p:cTn></p:par></p:tnLst>${bld ? `<p:bldLst>${bld}</p:bldLst>` : ''}</p:timing>`;
+    return { xml: `<p:timing><p:tnLst><p:par><p:cTn id="1" dur="indefinite" restart="never" nodeType="tmRoot"><p:childTnLst>${body}</p:childTnLst></p:cTn></p:par></p:tnLst>${bld ? `<p:bldLst>${bld}</p:bldLst>` : ''}</p:timing>`, snds: tb.snds };
+  }
+
+  const PIC_LOCK = '<a:picLocks noGrp="1" noSelect="1" noRot="1" noChangeAspect="1" noMove="1" noResize="1" noEditPoints="1" noAdjustHandles="1" noChangeArrowheads="1" noChangeShapeType="1" noCrop="1"/>';
+  const SP_LOCK = '<a:spLocks noGrp="1" noSelect="1" noRot="1" noMove="1" noResize="1" noEditPoints="1" noAdjustHandles="1" noChangeArrowheads="1" noChangeShapeType="1" noTextEdit="1"/>';
+
+  /** Đánh dấu "bản cuối" (Mark as Final) để PowerPoint mở ở chế độ chỉ đọc */
+  async function markFinal(zip) {
+    const core = zip.file('docProps/core.xml');
+    if (core) {
+      let x = await core.async('string');
+      if (!/contentStatus/.test(x)) x = x.replace('</cp:coreProperties>', '<cp:contentStatus>Final</cp:contentStatus></cp:coreProperties>');
+      zip.file('docProps/core.xml', x);
+    }
+    zip.file('docProps/custom.xml', '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<Properties xmlns="http://schemas.openxmlformats.org/officeDocument/2006/custom-properties" xmlns:vt="http://schemas.openxmlformats.org/officeDocument/2006/docPropsVTypes">' +
+      '<property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="2" name="_MarkAsFinal"><vt:bool>true</vt:bool></property>' +
+      '<property fmtid="{D5CDD505-2E9C-101B-9397-08002B2CF9AE}" pid="3" name="GameStudioProtected"><vt:lpwstr>PPTX Game Studio</vt:lpwstr></property></Properties>');
+    let ct = await zip.file('[Content_Types].xml').async('string');
+    if (!/custom\.xml/.test(ct)) ct = ct.replace('</Types>', '<Override PartName="/docProps/custom.xml" ContentType="application/vnd.openxmlformats-officedocument.custom-properties+xml"/></Types>');
+    zip.file('[Content_Types].xml', ct);
+    let rels = await zip.file('_rels/.rels').async('string');
+    if (!/custom-properties/.test(rels)) rels = rels.replace('</Relationships>', '<Relationship Id="rIdGSCustom" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/custom-properties" Target="docProps/custom.xml"/></Relationships>');
+    zip.file('_rels/.rels', rels);
   }
 
   const TRANS = {
@@ -159,25 +192,50 @@
    */
   async function exportDeck(deck, libs, opts) {
     opts = opts || {};
-    const { PptxGenJS, JSZip } = libs;
+    const { PptxGenJS, JSZip, Sounds } = libs;
+    const protect = !!(opts.protect && opts.rasterize);
     const pptx = new PptxGenJS();
     pptx.layout = 'LAYOUT_WIDE';
     pptx.title = deck.title; pptx.subject = 'Trò chơi bài giảng'; pptx.author = 'PPTX Game Studio'; pptx.company = 'PPTX Game Studio';
     pptx.theme = { headFontFace: F, bodyFontFace: F };
-    deck.slides.forEach((sd) => {
+    for (let i = 0; i < deck.slides.length; i++) {
+      const sd = deck.slides[i];
       const s = pptx.addSlide();
-      s.background = { color: sd.bg };
-      sd.shapes.forEach((sh) => addShape(s, sh));
+      if (protect) {
+        // Chế độ khóa: mọi hình được "in" thành ảnh, phần nền tĩnh gộp thành 1 ảnh nền.
+        if (opts.onProgress) opts.onProgress(i, deck.slides.length);
+        const r = await opts.rasterize(sd);
+        s.background = { data: r.bg };
+        sd.shapes.forEach((sh) => {
+          if (r.merged.has(sh.name)) return;
+          const im = r.images[sh.name];
+          if (im) s.addImage({ data: im.data, x: im.x, y: im.y, w: im.w, h: im.h, objectName: sh.name, altText: ' ' });
+        });
+      } else {
+        s.background = { color: sd.bg };
+        sd.shapes.forEach((sh) => addShape(s, sh));
+      }
       if (sd.notes) s.addNotes(sd.notes);
-    });
+    }
     const buf = await pptx.write({ outputType: 'arraybuffer' });
     const zip = await JSZip.loadAsync(buf);
+    const media = new Set();
     for (let i = 0; i < deck.slides.length; i++) {
       const sd = deck.slides[i];
       const path = `ppt/slides/slide${i + 1}.xml`;
       const relPath = `ppt/slides/_rels/slide${i + 1}.xml.rels`;
       let xml = await zip.file(path).async('string');
       let rels = await zip.file(relPath).async('string');
+      // Đổi mọi ảnh (<p:pic>) thành hình chữ nhật tô nền bằng ảnh: trông y hệt, nhưng PowerPoint xử lý
+      // như shape nên trigger vẫn chạy khi ảnh vừa có hiệu ứng ở chuỗi chính vừa có trong trigger.
+      xml = xml.replace(/<p:pic>([\s\S]*?)<\/p:pic>/g, (m, body) => {
+        const cNvPr = (body.match(/<p:cNvPr[^>]*\/>|<p:cNvPr[\s\S]*?<\/p:cNvPr>/) || [''])[0];
+        const blip = (body.match(/<a:blip r:embed="([^"]+)"/) || [])[1];
+        const xfrm = (body.match(/<a:xfrm[\s\S]*?<\/a:xfrm>/) || [''])[0];
+        if (!cNvPr || !blip || !xfrm) return m;
+        return `<p:sp><p:nvSpPr>${cNvPr}<p:cNvSpPr>${protect ? SP_LOCK : ''}</p:cNvSpPr><p:nvPr/></p:nvSpPr><p:spPr>${xfrm}<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>` +
+          `<a:blipFill dpi="0" rotWithShape="1"><a:blip r:embed="${blip}"/><a:srcRect/><a:stretch><a:fillRect/></a:stretch></a:blipFill><a:ln><a:noFill/></a:ln></p:spPr></p:sp>`;
+      });
       const ids = {}, pics = new Set();
       xml.replace(/<p:cNvPr id="(\d+)" name="([^"]*)"/g, (m, id, name) => { ids[name] = +id; return m; });
       xml.replace(/<p:pic>\s*<p:nvPicPr>\s*<p:cNvPr id="\d+" name="([^"]*)"/g, (m, name) => { pics.add(name); return m; });
@@ -193,11 +251,26 @@
           ? `${head}><a:hlinkClick r:id="${rid}" action="ppaction://hlinksldjump"${tip}/></p:cNvPr>`
           : `${head}><a:hlinkClick r:id="${rid}" action="ppaction://hlinksldjump"${tip}/>`);
       });
-      const extra = transitionXml(sd.transition) + timingXml(sd, ids, pics);
-      xml = xml.replace('</p:clrMapOvr>', '</p:clrMapOvr>' + extra);
+      const tm = timingXml(sd, ids, pics);
+      // Âm thanh: thêm file .wav (mỗi loại 1 lần cho cả bài) và quan hệ tới slide
+      if (Sounds && opts.sound !== false) {
+        tm.snds.forEach((rid, name) => {
+          const file = `gs-${name}.wav`;
+          if (!media.has(file)) { zip.file('ppt/media/' + file, Sounds.wavFor(name)); media.add(file); }
+          rels = rels.replace('</Relationships>', `<Relationship Id="${rid}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/audio" Target="../media/${file}"/></Relationships>`);
+        });
+      } else tm.xml = tm.xml.replace(/<p:subTnLst>.*?<\/p:subTnLst>/g, '');
+      if (protect) xml = xml.replace(/<a:picLocks[^>]*\/>/g, PIC_LOCK).replace(/<p:cNvSpPr(?: txBox="1")?\/>/g, `<p:cNvSpPr>${SP_LOCK}</p:cNvSpPr>`).replace(/<p:cNvSpPr><\/p:cNvSpPr>/g, `<p:cNvSpPr>${SP_LOCK}</p:cNvSpPr>`);
+      xml = xml.replace('</p:clrMapOvr>', '</p:clrMapOvr>' + transitionXml(sd.transition) + tm.xml);
       zip.file(path, xml);
       zip.file(relPath, rels);
     }
+    if (media.size) {
+      let ct = await zip.file('[Content_Types].xml').async('string');
+      if (!/Extension="wav"/i.test(ct)) ct = ct.replace('<Default ', '<Default Extension="wav" ContentType="audio/wav"/><Default ');
+      zip.file('[Content_Types].xml', ct);
+    }
+    if (protect) await markFinal(zip);
     return zip.generateAsync({ type: opts.outputType || 'blob', compression: 'DEFLATE', compressionOptions: { level: 6 },
       mimeType: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
   }

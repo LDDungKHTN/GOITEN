@@ -18,6 +18,18 @@ Ai là triệu phú · Nhìn hình đoán chữ · Mảnh ghép bí mật · Đ�
   trigger ngay trên trang, và có chế độ **⛶ Trình chiếu** toàn màn hình trên trình duyệt.
 - Ghi chú người dẫn (speaker notes) hướng dẫn cách chơi ở từng slide.
 
+## Tính năng mới (bản 2)
+
+- **📥 Nhập từ Word / ảnh:** đọc file .docx (nhận đáp án đúng qua "Đáp án: B", dấu `*`, hoặc phương án được
+  gạch chân / tô màu / tô đậm trong Word; nhận cả ảnh trong Word và bảng đáp án cuối bài) hoặc ảnh chụp đề
+  (nhận dạng chữ tiếng Việt bằng Tesseract.js, tải khi cần). Nội dung đọc được hiển thị để sửa trước khi chuyển
+  thành trò chơi theo lựa chọn (tự động / từng dạng).
+- **🔊 Âm thanh** cho mọi trò chơi (tự tổng hợp, không bản quyền) — phát trên web và nhúng vào PowerPoint.
+- **🏃 Vượt chướng ngại vật:** 3–8 chướng ngại trên đường đua, trả lời đúng thì nhân vật tiến lên, bấm 🏁 để về đích.
+- **🔒 Khóa nội dung khi xuất:** mọi chữ/hình được chuyển thành ảnh, khóa không cho chọn/di chuyển/sửa, file được
+  đánh dấu "bản cuối" và có dấu bản quyền mờ — người nhận không sửa câu hỏi hay sao chép bố cục để tự làm lại được,
+  trong khi hiệu ứng, trigger, âm thanh vẫn chạy.
+
 ## Cấu trúc
 
 ```text

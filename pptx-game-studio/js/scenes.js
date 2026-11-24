@@ -20,7 +20,8 @@
     picture: { label: 'Nhìn hình đoán chữ', icon: '🖼️' },
     puzzle: { label: 'Mảnh ghép bí mật', icon: '🧩' },
     truefalse: { label: 'Đúng / Sai', icon: '⚖️' },
-    tiles: { label: 'Lật ô số', icon: '🔢' }
+    tiles: { label: 'Lật ô số', icon: '🔢' },
+    obstacle: { label: 'Vượt chướng ngại vật', icon: '🏃' }
   };
 
   const TRANSITIONS = ['fade', 'push', 'zoom', 'cover', 'wipe'];
@@ -55,7 +56,14 @@
     }
     return min;
   }
-  const E = (target, type, delay, dur) => ({ target, type, delay: delay || 0, dur: dur || 500 });
+  // Hiệu ứng: target = tên hình, type = loại, delay/dur (ms), snd = âm thanh phát cùng (tùy chọn)
+  const E = (target, type, delay, dur, snd) => {
+    const e = { target, type, delay: delay || 0, dur: dur || 500 };
+    if (snd) e.snd = snd;
+    return e;
+  };
+  // Hiệu ứng "wipe" theo hướng: 'left' (từ trái), 'right', 'up' (từ trên), 'down'
+  const EW = (target, dir, delay, dur, snd) => Object.assign(E(target, 'wipeIn', delay, dur, snd), { dir });
 
   class Slide {
     constructor(o) {
@@ -100,8 +108,8 @@
       sl.add({ name: 'tend', shape: 'roundRect', radius: 0.3, x: 5.75, y: 0.22, w: 3.45, h: 0.7, fill: 'DC2626',
         line: 'FFFFFF', lineW: 2, text: 'HẾT GIỜ!', size: 22, bold: true, face: FB, color: 'FFFFFF', shadow: true });
       const ms = t * 1000;
-      sl.on('tbtn', [E('tbtn', 'pulse', 0, 300), E('tbar', 'wipeIn', 0, 350), E('tbar', 'timerOut', 400, ms),
-        E('tend', 'zoomIn', ms + 400, 400), E('tend', 'pulse', ms + 850, 500), E('tend', 'zoomOut', ms + 2600, 400)]);
+      sl.on('tbtn', [E('tbtn', 'pulse', 0, 300), E('tbar', 'wipeIn', 0, 350), E('tbar', 'timerOut', 400, ms, 'tick' + t),
+        E('tend', 'zoomIn', ms + 400, 400, 'timeup'), E('tend', 'pulse', ms + 850, 500), E('tend', 'zoomOut', ms + 2600, 400)]);
     }
   }
 
@@ -122,7 +130,7 @@
     sl.add({ name: 'sub', kind: 'text', x: 0.8, y: 2.85, w: 11.73, h: 0.65, text: sub, size: fit(sub, 11.4, 0.6, 22, 12), color: 'C7D2FE' });
 
     const n = entries.length;
-    const fx = [E('ttl', 'zoomIn', 0, 700), E('bar', 'wipeIn', 500, 500), E('sub', 'fadeIn', 700, 600)];
+    const fx = [E('ttl', 'zoomIn', 0, 700, 'intro'), E('bar', 'wipeIn', 500, 500), E('sub', 'fadeIn', 700, 600)];
     if (n) {
       const cols = n <= 5 ? 1 : n <= 12 ? 2 : 3;
       const rows = Math.ceil(n / cols);
@@ -134,8 +142,9 @@
         const c = Math.floor(i / rows), r = i % rows;
         const gt = GAME_TYPES[en.it.type] || { label: '', icon: '' };
         const label = `${i + 1}. ${gt.label}`;
-        const extra = short(en.it.question || en.it.statement || en.it.title || en.it.keyword || '', cols === 1 ? 52 : 26);
-        const size = clamp(Math.round(bh * 72 * 0.34), 10, 18);
+        const room = (cols === 1 ? 72 : cols === 2 ? 36 : 24) - label.length - 5;
+        let extra = room >= 8 ? short(en.it.question || en.it.statement || en.it.title || en.it.keyword || '', room) : '';
+        const size = Math.min(clamp(Math.round(bh * 72 * 0.34), 10, 18), fit(`${gt.icon}  ${label}  —  ${extra}`, bw - 0.5, bh - 0.08, 18, 9, 0.64));
         sl.add({ name: 'm' + i, shape: 'roundRect', radius: Math.min(0.18, bh / 2), x: X + c * (bw + gx), y: Y + r * (bh + gap), w: bw, h: bh,
           fill: 'FFFFFF', alpha: 87, line: 'A5B4FC', lineW: 1.25, align: 'left', pad: [14, 8, 2, 2], link: en.slideNo, tip: label,
           runs: [{ t: `${gt.icon}  ` }, { t: label, bold: true, color: 'FFFFFF' }, { t: extra ? `  —  ${extra}` : '', color: 'C7D2FE' }], size });
@@ -165,7 +174,7 @@
     sl.add({ name: 'ffl', kind: 'text', x: 11.35, y: 2.22, w: 1.7, h: 0.35, text: 'Trợ giúp', size: 11, color: 'C7D2FE' });
 
     const pos = [[0.6, 3.55], [6.98, 3.55], [0.6, 4.8], [6.98, 4.8]], bw = 5.75, bh = 1.0, L = 'ABCD';
-    const intro = [E('q', 'zoomIn', 0, 650), E('ff', 'zoomIn', 500, 400)];
+    const intro = [E('q', 'zoomIn', 0, 650, 'reveal'), E('ff', 'zoomIn', 500, 400)];
     answers.forEach((a, i) => {
       const [x, y] = pos[i];
       const size = fit(L[i] + ': ' + a, bw - 1.1, bh - 0.2, 22, 11);
@@ -198,14 +207,14 @@
     sl.auto(intro);
     answers.forEach((a, i) => {
       if (i === correct) {
-        sl.on('a' + i, [E('ok' + i, 'zoomIn', 0, 450), E('ok' + i, 'pulse', 500, 500), E('win', 'zoomIn', 0, 450),
+        sl.on('a' + i, [E('ok' + i, 'zoomIn', 0, 450, 'correct'), E('ok' + i, 'pulse', 500, 500), E('win', 'zoomIn', 0, 450),
           E('win', 'zoomOut', 1700, 400)].concat(ex ? [E('ex', 'floatIn', 600, 500)] : []));
       } else {
-        sl.on('a' + i, [E('bad' + i, 'fadeIn', 0, 300), E('bad' + i, 'pulse', 300, 400), E('lose', 'zoomIn', 0, 400), E('lose', 'zoomOut', 1500, 350)]);
+        sl.on('a' + i, [E('bad' + i, 'fadeIn', 0, 300, 'wrong'), E('bad' + i, 'pulse', 300, 400), E('lose', 'zoomIn', 0, 400), E('lose', 'zoomOut', 1500, 350)]);
       }
     });
-    sl.on('ff', [E('ff', 'pulse', 0, 300)].concat(drop.map((i, k) => E('dim' + i, 'fadeIn', 250 + k * 200, 500)), [E('ff', 'fadeOut', 900, 400)]));
-    sl.click([E('ok' + correct, 'zoomIn', 0, 500), E('ok' + correct, 'pulse', 550, 500)].concat(ex ? [E('ex', 'floatIn', 400, 500)] : []));
+    sl.on('ff', [E('ff', 'pulse', 0, 300, 'whoosh')].concat(drop.map((i, k) => E('dim' + i, 'fadeIn', 250 + k * 200, 500)), [E('ff', 'fadeOut', 900, 400)]));
+    sl.click([E('ok' + correct, 'zoomIn', 0, 500, 'correct'), E('ok' + correct, 'pulse', 550, 500)].concat(ex ? [E('ex', 'floatIn', 400, 500)] : []));
     sl.notes = `Ai là triệu phú – Đáp án đúng: ${L[correct]}.\n• Bấm trực tiếp vào ô đáp án học sinh chọn: đúng → xanh + "CHÍNH XÁC!", sai → đỏ + "CHƯA ĐÚNG!".\n• Nút 50:50 loại bỏ 2 phương án sai.${parseInt(it.timer, 10) ? '\n• Bấm nút ⏱ để bắt đầu đếm giờ.' : ''}\n• Bấm ra ngoài (hoặc phím →) để công bố đáp án; bấm tiếp để sang trò chơi sau.`;
     return sl;
   }
@@ -251,7 +260,7 @@
     else sl.add({ name: 'img', kind: 'text', x: 0.75, y: 1.35, w: 5.9, h: 5.45, text: '🖼️\nChưa có ảnh', size: 28, color: '94A3B8' });
     const prompt = nfc(it.question) || 'Hình ảnh này gợi nhắc đến từ khóa nào?';
     sl.add({ name: 'pr', kind: 'text', x: 7.15, y: 1.2, w: 5.6, h: 1.0, text: prompt, size: fit(prompt, 5.4, 0.9, 26, 13), bold: true, color: 'FFFFFF', align: 'left' });
-    const fx = [E('frm', 'zoomIn', 0, 600), E('img', 'fadeIn', 300, 700), E('pr', 'floatIn', 500, 500)];
+    const fx = [E('frm', 'zoomIn', 0, 600, 'reveal'), E('img', 'fadeIn', 300, 700), E('pr', 'floatIn', 500, 500)];
     const hint = nfc(it.hint);
     if (hint) {
       sl.add({ name: 'hb', shape: 'roundRect', radius: 0.18, x: 7.15, y: 2.3, w: 5.6, h: 1.25, fill: 'FFFFFF', alpha: 86, line: AC, lineW: 1.5,
@@ -259,7 +268,7 @@
       sl.add({ name: 'hint', shape: 'roundRect', radius: 0.18, x: 7.15, y: 2.3, w: 5.6, h: 1.25, fill: 'FEF3C7', line: 'F59E0B', lineW: 1.5,
         text: 'Gợi ý: ' + hint, size: fit('Gợi ý: ' + hint, 5.3, 1.1, 20, 11), color: '1F2937', align: 'left', pad: [12, 10, 2, 2] });
       fx.push(E('hb', 'floatIn', 700, 500));
-      sl.on('hb', [E('hint', 'zoomIn', 0, 450)]);
+      sl.on('hb', [E('hint', 'zoomIn', 0, 450, 'reveal')]);
     }
     const { s, tiles } = layoutLetters(it.answer || '', 7.15, 3.8, 5.6, 2.45, 0.8);
     const letters = tiles.length;
@@ -271,13 +280,13 @@
     tiles.forEach((t, k) => {
       sl.add({ name: 'L' + k, shape: 'roundRect', radius: s * 0.18, x: t.x, y: t.y, w: s, h: s, fill: 'FDE047', line: 'F59E0B', lineW: 1.5,
         text: t.ch, size: Math.round(s * 72 * 0.52), bold: true, face: FB, color: '1F2937', shadow: true });
-      sl.on('q' + k, [E('L' + k, 'zoomIn', 0, 350)]);
+      sl.on('q' + k, [E('L' + k, 'zoomIn', 0, 350, 'pop')]);
     });
     const info = letters ? `Từ khóa gồm ${letters} chữ cái • bấm vào ô "?" để mở từng chữ` : 'Chưa nhập từ khóa đáp án';
     sl.add({ name: 'inf', kind: 'text', x: 7.15, y: 6.35, w: 5.6, h: 0.55, text: info, size: 13, color: '99F6E4' });
     fx.push(E('inf', 'fadeIn', 1000, 500));
     sl.auto(fx);
-    if (letters) sl.click(tiles.map((t, k) => E('L' + k, 'zoomIn', k * 110, 350)).concat([E('frm', 'pulse', letters * 110 + 200, 600)]));
+    if (letters) sl.click(tiles.map((t, k) => E('L' + k, 'zoomIn', k * 110, 350, k === 0 ? 'reveal' : null)).concat([E('frm', 'pulse', letters * 110 + 200, 600, 'win')]));
     sl.notes = `Nhìn hình đoán chữ – Đáp án: ${nfc(it.answer)}.\n• Bấm ô "Bấm để xem gợi ý" để hiện gợi ý.\n• Bấm từng ô "?" để mở từng chữ cái.\n• Bấm ra ngoài (phím →) để mở toàn bộ đáp án.`;
     return sl;
   }
@@ -311,7 +320,7 @@
     const img = it._img || it.image;
     if (img) sl.add({ name: 'img', kind: 'image', x: X, y: Y, w: AW, h: AH, data: img });
     const tw = AW / cols, th = AH / rows;
-    const fx = [E('frm', 'zoomIn', 0, 600)];
+    const fx = [E('frm', 'zoomIn', 0, 600, 'reveal')];
     pieces.forEach((p, k) => {
       const c = k % cols, r = Math.floor(k / cols);
       sl.add({ name: 'T' + k, shape: 'rect', x: X + c * tw, y: Y + r * th, w: tw, h: th, fill: PIECE_COLORS[k], line: 'FFFFFF', lineW: 3,
@@ -332,11 +341,11 @@
     pieces.forEach((p, k) => popup(sl, k, `MẢNH GHÉP SỐ ${k + 1}`, PIECE_COLORS[k], p.question, p.answer));
     sl.auto(fx);
     pieces.forEach((p, k) => {
-      sl.on('T' + k, [E('T' + k, 'pulse', 0, 250), E('P' + k, 'zoomIn', 200, 450)]);
-      sl.on('P' + k, [E('A' + k, 'floatIn', 0, 450)]);
-      sl.on('A' + k, [E('A' + k, 'zoomOut', 0, 300), E('P' + k, 'zoomOut', 150, 400), E('T' + k, 'zoomOut', 600, 550)]);
+      sl.on('T' + k, [E('T' + k, 'pulse', 0, 250, 'pop'), E('P' + k, 'zoomIn', 200, 450)]);
+      sl.on('P' + k, [E('A' + k, 'floatIn', 0, 450, 'reveal')]);
+      sl.on('A' + k, [E('A' + k, 'zoomOut', 0, 300), E('P' + k, 'zoomOut', 150, 400), E('T' + k, 'zoomOut', 600, 550, 'whoosh')]);
     });
-    sl.click((img ? [E('full', 'fadeIn', 0, 900)] : []).concat([E('kw', 'zoomIn', 700, 550), E('kw', 'pulse', 1350, 600)]));
+    sl.click((img ? [E('full', 'fadeIn', 0, 900, 'win')] : []).concat([E('kw', 'zoomIn', 700, 550, img ? null : 'win'), E('kw', 'pulse', 1350, 600)]));
     sl.notes = `Mảnh ghép bí mật – Từ khóa: ${kw}.\n• Bấm vào số trên mảnh ghép → hiện câu hỏi; bấm vào khung câu hỏi → hiện đáp án; bấm vào đáp án → lật mảnh ghép.\n• Bấm ra ngoài (phím →) để mở toàn bộ hình và công bố từ khóa.`;
     return sl;
   }
@@ -365,11 +374,11 @@
       text: '💡 ' + ex, size: fit('💡 ' + ex, 11.0, 0.95, 20, 11), color: '1F2937', align: 'left', pad: [16, 12, 2, 2] });
     stamp(sl, 'win', 'CHÍNH XÁC!', 'FDE047', '1F2937', -6, 2.3);
     stamp(sl, 'lose', 'CHƯA ĐÚNG!', 'DC2626', 'FFFFFF', 5, 2.3);
-    sl.auto([E('s', 'zoomIn', 0, 600), E('lbl', 'fadeIn', 400, 400), E('cT', 'floatIn', 600, 500), E('cF', 'floatIn', 780, 500)]);
-    sl.on('c' + good, [E('c' + good, 'pulse', 0, 450), E('ring', 'zoomIn', 0, 450), E('win', 'zoomIn', 100, 450), E('win', 'zoomOut', 1800, 400)]
+    sl.auto([E('s', 'zoomIn', 0, 600, 'reveal'), E('lbl', 'fadeIn', 400, 400), E('cT', 'floatIn', 600, 500), E('cF', 'floatIn', 780, 500)]);
+    sl.on('c' + good, [E('c' + good, 'pulse', 0, 450, 'correct'), E('ring', 'zoomIn', 0, 450), E('win', 'zoomIn', 100, 450), E('win', 'zoomOut', 1800, 400)]
       .concat(ex ? [E('ex', 'floatIn', 700, 500)] : []));
-    sl.on('c' + badk, [E('c' + badk, 'pulse', 0, 400), E('lose', 'zoomIn', 50, 400), E('lose', 'zoomOut', 1500, 350)]);
-    sl.click([E('ring', 'zoomIn', 0, 450), E('dim', 'fadeIn', 200, 500)].concat(ex ? [E('ex', 'floatIn', 500, 500)] : []));
+    sl.on('c' + badk, [E('c' + badk, 'pulse', 0, 400, 'wrong'), E('lose', 'zoomIn', 50, 400), E('lose', 'zoomOut', 1500, 350)]);
+    sl.click([E('ring', 'zoomIn', 0, 450, 'correct'), E('dim', 'fadeIn', 200, 500)].concat(ex ? [E('ex', 'floatIn', 500, 500)] : []));
     sl.notes = `Đúng / Sai – Kết luận: ${isTrue ? 'ĐÚNG' : 'SAI'}.\n• Bấm vào thẻ học sinh chọn để chấm ngay.\n• Bấm ra ngoài (phím →) để công bố kết luận và giải thích.`;
     return sl;
   }
@@ -393,7 +402,7 @@
     const th = Math.min((AHt - (rows - 1) * gap) / rows, 2.6);
     const tw = Math.min((12.13 - (maxCols - 1) * gap) / maxCols, th * 1.35);
     const totalH = rows * th + (rows - 1) * gap;
-    const fx = [E('tt', 'fadeIn', 0, 500)];
+    const fx = [E('tt', 'fadeIn', 0, 500, 'reveal')];
     let k = 0;
     perRow.forEach((cnt, r) => {
       const rowW = cnt * tw + (cnt - 1) * gap;
@@ -411,11 +420,96 @@
     cells.forEach((c, i) => popup(sl, i, `Ô SỐ ${i + 1}`, TILE_COLORS[i % 8], c.question, c.answer));
     sl.auto(fx);
     cells.forEach((c, i) => {
-      sl.on('T' + i, [E('T' + i, 'pulse', 0, 250), E('P' + i, 'zoomIn', 200, 450)]);
-      sl.on('P' + i, [E('A' + i, 'floatIn', 0, 450)]);
-      sl.on('A' + i, [E('A' + i, 'zoomOut', 0, 300), E('P' + i, 'zoomOut', 150, 400), E('D' + i, 'fadeIn', 550, 10), E('T' + i, 'zoomOut', 550, 550)]);
+      sl.on('T' + i, [E('T' + i, 'pulse', 0, 250, 'pop'), E('P' + i, 'zoomIn', 200, 450)]);
+      sl.on('P' + i, [E('A' + i, 'floatIn', 0, 450, 'reveal')]);
+      sl.on('A' + i, [E('A' + i, 'zoomOut', 0, 300), E('P' + i, 'zoomOut', 150, 400), E('D' + i, 'fadeIn', 550, 10), E('T' + i, 'zoomOut', 550, 550, 'whoosh')]);
     });
     sl.notes = `Lật ô số – ${n} ô.\n• Bấm vào ô số → hiện câu hỏi; bấm vào khung câu hỏi → hiện đáp án; bấm vào đáp án → ô được lật và ghi lại đáp án trên bảng.\n• Bảng cuối cùng chính là bảng tổng kết đáp án.`;
+    return sl;
+  }
+
+  /* ---------------- 6. Vượt chướng ngại vật ---------------- */
+  // chỉ dùng emoji có sẵn trên Windows 10 / PowerPoint 2016+
+  const OBST_ICONS = ['🧱', '🔥', '🌊', '🌵', '⛰️', '⚡', '🐊', '🌋'];
+  function buildObstacle(it, ctx) {
+    const sl = new Slide({ key: 'obstacle', label: 'Vượt chướng ngại vật', bg: '14532D', transition: ctx.transition, itemId: it.id });
+    deco(sl, ['22C55E', 'FACC15', '38BDF8']);
+    const AC = '4ADE80';
+    header(sl, 'VƯỢT CHƯỚNG NGẠI VẬT', AC, '14532D', ctx, it.timer);
+    const steps = (it.steps || []).slice(0, 8);
+    while (steps.length < 3) steps.push({ question: '', answer: '' });
+    const n = steps.length;
+    const title = nfc(it.title) || 'Vượt qua tất cả chướng ngại vật để về đích!';
+    sl.add({ name: 'tt', kind: 'text', x: 0.6, y: 0.98, w: 12.13, h: 0.55, text: title, size: fit(title, 11.8, 0.5, 22, 12), bold: true, color: 'FFFFFF' });
+
+    // Các điểm trên đường đua: xuất phát, n chướng ngại vật, đích
+    const pts = [];
+    if (n <= 4) {
+      const y = 4.25;
+      for (let i = 0; i <= n + 1; i++) pts.push({ x: 1.0 + (11.33 * i) / (n + 1), y });
+    } else {
+      // hàng 1: xuất phát + k1 chướng ngại (trái → phải); hàng 2: k2 chướng ngại + đích (phải → trái)
+      const k1 = Math.ceil(n / 2), k2 = n - k1, y1 = 3.0, y2 = 5.75, xl = 1.0, xr = 12.2;
+      for (let i = 0; i <= k1; i++) pts.push({ x: xl + ((xr - xl) * i) / k1, y: y1 });
+      for (let i = 0; i <= k2; i++) pts.push({ x: xr - ((xr - xl) * i) / k2, y: y2 });
+    }
+    // Đường đua (nền) và vệt tiến trình (hiện dần theo hướng chạy)
+    const RW = 0.42;
+    const segs = [];
+    for (let i = 1; i < pts.length; i++) {
+      const a = pts[i - 1], b = pts[i];
+      segs.push(a.y === b.y
+        ? { x: Math.min(a.x, b.x) - RW / 2, y: a.y - RW / 2, w: Math.abs(b.x - a.x) + RW, h: RW, dir: b.x >= a.x ? 'left' : 'right' }
+        : { x: a.x - RW / 2, y: Math.min(a.y, b.y) - RW / 2, w: RW, h: Math.abs(b.y - a.y) + RW, dir: b.y >= a.y ? 'up' : 'down' });
+    }
+    segs.forEach((s, i) => sl.add({ name: 'rd' + i, shape: 'roundRect', radius: RW / 2, x: s.x, y: s.y, w: s.w, h: s.h, fill: '0F172A', alpha: 35, line: '86EFAC', lineW: 1.25, dash: true }));
+    segs.forEach((s, i) => sl.add({ name: 'pg' + i, shape: 'roundRect', radius: RW / 2, x: s.x, y: s.y, w: s.w, h: s.h, fill: 'FACC15' }));
+    const S = 1.15, R = 0.82;
+    const st = pts[0], fin = pts[n + 1];
+    sl.add({ name: 'start', shape: 'roundRect', radius: 0.18, x: st.x - 0.62, y: st.y + 0.55, w: 1.24, h: 0.42, fill: 'FFFFFF', alpha: 85, text: 'XUẤT PHÁT', size: 11, bold: true, color: 'FFFFFF' });
+    sl.add({ name: 'fin', shape: 'ellipse', x: fin.x - 0.55, y: fin.y - 0.55, w: 1.1, h: 1.1, fill: 'FFFFFF', line: 'FACC15', lineW: 3, text: '🏁', size: 30, shadow: true });
+    sl.add({ name: 'finl', kind: 'text', x: fin.x - 0.8, y: fin.y + 0.58, w: 1.6, h: 0.4, text: 'ĐÍCH', size: 13, bold: true, color: 'FDE047' });
+    const fx = [E('tt', 'fadeIn', 0, 500, 'reveal')];
+    steps.forEach((s, k) => {
+      const p = pts[k + 1];
+      sl.add({ name: 'D' + k, shape: 'ellipse', x: p.x - 0.42, y: p.y - 0.42, w: 0.84, h: 0.84, fill: '16A34A', line: 'FFFFFF', lineW: 2.5, text: '✔', size: 26, bold: true, color: 'FFFFFF' });
+      sl.add({ name: 'O' + k, shape: 'roundRect', radius: 0.22, x: p.x - S / 2, y: p.y - S / 2, w: S, h: S, fill: PIECE_COLORS[k % PIECE_COLORS.length], line: 'FFFFFF', lineW: 2.5, shadow: true,
+        runs: [{ t: OBST_ICONS[k % OBST_ICONS.length] + '\n', size: 26 }, { t: String(k + 1), size: 20, bold: true, face: FB, color: 'FFFFFF' }], size: 20, pad: [2, 2, 2, 2] });
+      fx.push(E('O' + k, 'zoomIn', 400 + k * 130, 420));
+    });
+    // nhân vật ở từng vị trí (chỉ hiện 1 vị trí tại một thời điểm)
+    const runner = (name, p, dy) => sl.add({ name, shape: 'ellipse', x: p.x - R / 2, y: p.y - R / 2 - (dy || 0), w: R, h: R, fill: 'FDE047', line: 'F59E0B', lineW: 3, text: '🏃', size: 26, shadow: true });
+    runner('R0', st, 0);
+    steps.forEach((s, k) => runner('R' + (k + 1), pts[k + 1], 0.95));
+    runner('RF', fin, 0.95);
+    sl.add({ name: 'goal', shape: 'roundRect', radius: 0.3, x: 3.67, y: 2.75, w: 6.0, h: 1.5, fill: 'FDE047', line: 'FFFFFF', lineW: 4, text: '🏆  VỀ ĐÍCH!', size: 48, bold: true, face: FB, color: '14532D', shadow: true, rot: -4 });
+    fx.push(E('R0', 'zoomIn', 400 + n * 130, 450, 'step'));
+
+    // Hộp câu hỏi cho từng chướng ngại vật
+    steps.forEach((s, k) => {
+      const color = PIECE_COLORS[k % PIECE_COLORS.length];
+      const q = nfc(s.question) || '(Chưa nhập câu hỏi)';
+      sl.add({ name: 'P' + k, shape: 'roundRect', radius: 0.22, x: 1.9, y: 1.3, w: 9.53, h: 4.95, fill: 'FFFFFF', line: color, lineW: 4, shadow: true, valign: 'top', pad: [26, 26, 8, 20],
+        runs: [{ t: `CHƯỚNG NGẠI VẬT ${k + 1}  ${OBST_ICONS[k % OBST_ICONS.length]}\n`, color, bold: true, size: 18, face: FB }, { t: q, color: '1F2937', bold: true, size: fit(q, 8.9, 1.9, 30, 13) }] });
+      const a = nfc(s.answer), at = a ? 'Đáp án: ' + a : 'Đáp án: (chưa nhập)';
+      sl.add({ name: 'A' + k, shape: 'roundRect', radius: 0.18, x: 2.4, y: 3.75, w: 8.53, h: 1.0, fill: 'ECFDF5', line: '16A34A', lineW: 2, text: at, size: fit(at, 8.1, 0.85, 26, 12), bold: true, color: '14532D' });
+      sl.add({ name: 'OK' + k, shape: 'roundRect', radius: 0.2, x: 2.4, y: 5.0, w: 4.15, h: 0.9, fill: '16A34A', line: 'BBF7D0', lineW: 2, text: '✔  Vượt qua', size: 22, bold: true, color: 'FFFFFF', shadow: true });
+      sl.add({ name: 'NO' + k, shape: 'roundRect', radius: 0.2, x: 6.78, y: 5.0, w: 4.15, h: 0.9, fill: 'DC2626', line: 'FECACA', lineW: 2, text: '✘  Chưa vượt qua', size: 22, bold: true, color: 'FFFFFF', shadow: true });
+    });
+    sl.auto(fx);
+    const close = (k) => [E('A' + k, 'zoomOut', 0, 300), E('OK' + k, 'zoomOut', 0, 300), E('NO' + k, 'zoomOut', 0, 300), E('P' + k, 'zoomOut', 120, 400)];
+    steps.forEach((s, k) => {
+      const prev = 'R' + k;
+      sl.on('O' + k, [E('O' + k, 'pulse', 0, 250, 'pop'), E('P' + k, 'zoomIn', 200, 450)]);
+      sl.on('P' + k, [E('A' + k, 'floatIn', 0, 400, 'reveal'), E('OK' + k, 'zoomIn', 300, 350), E('NO' + k, 'zoomIn', 380, 350)]);
+      sl.on('OK' + k, close(k).concat([E('O' + k, 'zoomOut', 500, 450, 'correct'), E('D' + k, 'zoomIn', 850, 350),
+        EW('pg' + k, segs[k].dir, 600, 500), E(prev, 'fadeOut', 1000, 300), E('R' + (k + 1), 'zoomIn', 1150, 450, 'step')]));
+      sl.on('NO' + k, close(k).concat([E('O' + k, 'pulse', 500, 500, 'wrong')]));
+    });
+    // Về đích: bấm vào lá cờ 🏁 sau khi vượt hết chướng ngại vật
+    sl.on('fin', [EW('pg' + n, segs[n].dir, 0, 500), E('R' + n, 'fadeOut', 400, 300), E('RF', 'zoomIn', 550, 450, 'step'),
+      E('goal', 'zoomIn', 1100, 600, 'win'), E('goal', 'pulse', 1800, 600), E('goal', 'zoomOut', 4200, 500)]);
+    sl.notes = `Vượt chướng ngại vật – ${n} chướng ngại.\n• Bấm vào chướng ngại vật theo thứ tự 1 → ${n} để hiện câu hỏi; bấm vào khung câu hỏi để hiện đáp án.\n• Bấm "Vượt qua" → nhân vật tiến lên; bấm "Chưa vượt qua" → giữ nguyên.\n• Khi vượt hết, bấm vào lá cờ 🏁 để nhân vật về đích.`;
     return sl;
   }
 
@@ -436,11 +530,11 @@
     sl.add({ name: 'msg', kind: 'text', x: 0.8, y: 3.75, w: 11.73, h: 0.8, text: msg, size: fit(msg, 11.4, 0.75, 28, 14), color: 'FFFFFF' });
     sl.add({ name: 'back', shape: 'roundRect', radius: 0.28, x: 4.67, y: 5.0, w: 4.0, h: 0.62, fill: 'FFFFFF', alpha: 85, line: 'A5B4FC', lineW: 1.5,
       text: '⌂  Về danh sách trò chơi', size: 16, bold: true, color: 'FFFFFF', link: 1 });
-    sl.auto([E('big', 'zoomIn', 0, 700), E('big', 'pulse', 800, 600), E('msg', 'floatIn', 500, 600), E('back', 'fadeIn', 1100, 500)].concat(fx));
+    sl.auto([E('big', 'zoomIn', 0, 700, 'win'), E('big', 'pulse', 800, 600), E('msg', 'floatIn', 500, 600), E('back', 'fadeIn', 1100, 500)].concat(fx));
     return sl;
   }
 
-  const BUILDERS = { millionaire: buildMillionaire, picture: buildPicture, puzzle: buildPuzzle, truefalse: buildTrueFalse, tiles: buildTiles };
+  const BUILDERS = { millionaire: buildMillionaire, picture: buildPicture, puzzle: buildPuzzle, truefalse: buildTrueFalse, tiles: buildTiles, obstacle: buildObstacle };
 
   /** Dựng toàn bộ bài trình chiếu từ project (chỉ các mục includedInExport). */
   function buildDeck(project) {
@@ -463,6 +557,7 @@
       case 'puzzle': return Object.assign(base, { image: '', pieceCount: 4, keyword: '', pieces: [0, 1, 2, 3].map(() => ({ question: '', answer: '' })) });
       case 'truefalse': return Object.assign(base, { statement: '', isTrue: true, explanation: '', timer: 15 });
       case 'tiles': return Object.assign(base, { title: 'Chọn một ô số bất kỳ!', cells: [0, 1, 2, 3].map(() => ({ question: '', answer: '' })) });
+      case 'obstacle': return Object.assign(base, { title: 'Vượt qua tất cả chướng ngại vật để về đích!', steps: [0, 1, 2, 3].map(() => ({ question: '', answer: '' })) });
     }
     return base;
   }

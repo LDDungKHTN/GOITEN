@@ -19,7 +19,9 @@
   </div>
   <div class="actions">
     <span class="user-badge" id="userBadge" title="Mã thiết bị của bạn">👤 <b id="userId">…</b></span>
-    <button class="btn ghost" id="btnSample" title="Tải bộ câu hỏi mẫu 5 trò chơi">✨ Mẫu thử</button>
+    <button class="btn ghost" id="btnSound" title="Bật / tắt âm thanh">🔊</button>
+    <button class="btn ghost" id="btnImport" title="Đọc câu hỏi từ file Word hoặc ảnh chụp đề">📥 Nhập từ Word / ảnh</button>
+    <button class="btn ghost" id="btnSample" title="Tải bộ câu hỏi mẫu">✨ Mẫu thử</button>
     <button class="btn ghost" id="btnOpen" title="Mở file nháp .json">📂 Mở nháp</button>
     <button class="btn ghost" id="btnSave" title="Lưu file nháp .json về máy">💾 Lưu nháp</button>
     <button class="btn ghost" id="btnPresent" title="Trình chiếu ngay trên trình duyệt">⛶ Trình chiếu</button>
@@ -64,6 +66,7 @@
           <option value="puzzle">🧩 Mảnh ghép bí mật</option>
           <option value="truefalse">⚖️ Đúng / Sai</option>
           <option value="tiles">🔢 Lật ô số</option>
+          <option value="obstacle">🏃 Vượt chướng ngại vật</option>
         </select>
         <button class="btn primary" id="btnAdd">＋ Thêm trò chơi / câu hỏi mới</button>
       </div>
@@ -112,6 +115,56 @@
   </div>
 </div>
 
+<!-- Modal nhập câu hỏi từ Word / ảnh -->
+<div class="modal" id="mImport" hidden>
+  <div class="dialog wide">
+    <h3>📥 Nhập câu hỏi từ Word hoặc ảnh</h3>
+    <p class="muted small">Chọn file Word (.docx) hoặc ảnh chụp đề (JPG, PNG). Trang tự đọc nội dung, nhận dạng câu hỏi và chuyển thành trò chơi theo lựa chọn của bạn.</p>
+    <label class="drop" id="dropZone">
+      <input type="file" id="impFile" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/*" multiple hidden>
+      <span>📄 Bấm để chọn file hoặc kéo thả file vào đây</span>
+      <small>Word .docx • Ảnh .jpg .png (có thể chọn nhiều file)</small>
+    </label>
+    <div class="imp-status" id="impStatus"></div>
+    <label class="field"><span>Nội dung đọc được — có thể sửa lại cho đúng trước khi chuyển</span>
+      <textarea id="impText" rows="9" spellcheck="false" placeholder="Hoặc dán nội dung câu hỏi vào đây…"></textarea></label>
+    <details class="fmt">
+      <summary>Cách trình bày đề để nhận dạng chính xác nhất</summary>
+<pre>Câu 1: Hành tinh nào gần Mặt Trời nhất?
+A. Sao Kim
+B. Sao Thủy        ← đáp án đúng: ghi "Đáp án: B", hoặc thêm dấu * trước B,
+C. Trái Đất           hoặc trong Word gạch chân / tô màu phương án đúng
+D. Sao Hỏa
+Giải thích: Sao Thủy gần Mặt Trời nhất.
+
+Câu 2: Âm thanh truyền được trong chân không.
+Đáp án: Sai        ← câu Đúng / Sai
+
+Câu 3: Công thức hóa học của nước?
+Đáp án: H2O        ← câu hỏi ngắn (dùng cho Lật ô số, Mảnh ghép, Vượt chướng ngại vật)
+
+Có thể ghi bảng đáp án ở cuối:  ĐÁP ÁN  1-B  2-Sai  4-C</pre>
+    </details>
+    <div class="imp-row">
+      <label class="field"><span>Chuyển thành trò chơi</span>
+        <select id="impTarget">
+          <option value="auto">✨ Tự động theo dạng câu hỏi</option>
+          <option value="millionaire">💰 Ai là triệu phú (mỗi câu 1 trò)</option>
+          <option value="truefalse">⚖️ Đúng / Sai (mỗi câu 1 trò)</option>
+          <option value="tiles">🔢 Lật ô số (gộp 4–8 câu / bảng)</option>
+          <option value="obstacle">🏃 Vượt chướng ngại vật (gộp 3–6 câu / chặng)</option>
+          <option value="puzzle">🧩 Mảnh ghép bí mật (gộp 4–9 câu / hình)</option>
+          <option value="picture">🖼️ Nhìn hình đoán chữ (câu có ảnh trong Word)</option>
+        </select></label>
+    </div>
+    <div id="impPreview" class="imp-preview"></div>
+    <div class="dlg-actions">
+      <button class="btn ghost" data-close>Đóng</button>
+      <button class="btn primary" id="impAdd" disabled>＋ Thêm vào bài</button>
+    </div>
+  </div>
+</div>
+
 <!-- Modal xác nhận / thông báo -->
 <div class="modal" id="mConfirm" hidden>
   <div class="dialog">
@@ -144,6 +197,9 @@
 <script src="vendor/pptxgen.bundle.js"></script>
 <script src="config.js"></script>
 <script src="js/backend.js"></script>
+<script src="js/sounds.js"></script>
+<script src="js/raster.js"></script>
+<script src="js/importer.js"></script>
 <script src="js/scenes.js"></script>
 <script src="js/player.js"></script>
 <script src="js/pptx-export.js"></script>
