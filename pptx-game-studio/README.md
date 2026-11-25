@@ -78,7 +78,7 @@ duyệt mô tả dưới đây.
 
 ### Chế độ không máy chủ (dự phòng)
 
-- Người dùng mới được **5 lượt xuất miễn phí**. Mỗi mã kích hoạt cộng **5 lượt** (giá và số tài khoản cấu hình
+- Người dùng mới được **2 lượt xuất miễn phí**. Mỗi mã kích hoạt cộng **5 lượt** (giá và số tài khoản cấu hình
   trong `config.js` → `PAYMENT`).
 - Trang chỉ chứa `js/code-hashes.js` = "dấu vân tay" PBKDF2 của các mã, **không chứa mã thật**. Danh sách mã thật
   và trạng thái bán nằm trong file `quan-ly-ma.html` trên máy của thầy (không đưa lên GitHub).

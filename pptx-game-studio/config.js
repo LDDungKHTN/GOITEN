@@ -15,7 +15,7 @@ window.GS_CONFIG = {
   SUPABASE_URL: 'https://hazyoekkxzortmegfyud.supabase.co',
   SUPABASE_ANON_KEY: 'sb_publishable_koVSmGDSTqCI2VofPMV5BQ__8dKuB2B', // khóa publishable (công khai được)
   API_BASE: '',
-  DEMO_START_CREDITS: 5,   // số lượt xuất miễn phí khi dùng thử
+  DEMO_START_CREDITS: 2,   // số lượt xuất miễn phí khi dùng thử (phải khớp DEFAULT trong server/schema.sql)
   CREDITS_PER_CODE: 5,     // mỗi mã kích hoạt cộng 5 lượt
   // Thông tin mua mã (hiện trong hộp "Nhập mã kích hoạt")
   PAYMENT: {

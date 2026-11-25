@@ -9,7 +9,7 @@
 -- 1. Bảng người dùng / thiết bị
 CREATE TABLE IF NOT EXISTS users (
   id TEXT PRIMARY KEY,
-  remaining_exports INTEGER NOT NULL DEFAULT 5 CHECK (remaining_exports >= 0),
+  remaining_exports INTEGER NOT NULL DEFAULT 2 CHECK (remaining_exports >= 0),
   created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 );

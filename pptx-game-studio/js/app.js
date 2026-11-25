@@ -113,7 +113,7 @@
     const m = B.mode();
     const P = C.PAYMENT || {};
     const per = C.CREDITS_PER_CODE || 5;
-    $('#modeNote').innerHTML = `🎁 Dùng thử miễn phí <b>${C.DEMO_START_CREDITS || 5} lượt xuất</b>. Soạn bài, xem trước, trình chiếu online luôn miễn phí.
+    $('#modeNote').innerHTML = `🎁 Dùng thử miễn phí <b>${C.DEMO_START_CREDITS || 2} lượt xuất</b>. Soạn bài, xem trước, trình chiếu online luôn miễn phí.
          Hết lượt? <a data-open-redeem>Mua mã: ${esc((P.prices && P.prices[0] && P.prices[0][1]) || '')} / ${per} lượt</a>` +
       (m === 'demo' ? '' : ` <span class="live" title="Lượt xuất và mã kích hoạt được quản lý trên máy chủ">● Đã kết nối máy chủ</span>`);
     const a = $('#modeNote a[data-open-redeem]'); if (a) a.onclick = () => openRedeem();

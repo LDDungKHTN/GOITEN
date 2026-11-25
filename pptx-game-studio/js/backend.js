@@ -49,7 +49,7 @@
     _set(s) { try { localStorage.setItem(this.KEY, JSON.stringify(s)); } catch (e) { /* bỏ qua */ } },
     _state() {
       let s = this._get();
-      if (!s) { s = { remaining: C.DEMO_START_CREDITS != null ? C.DEMO_START_CREDITS : 5, used: [] }; this._set(s); }
+      if (!s) { s = { remaining: C.DEMO_START_CREDITS != null ? C.DEMO_START_CREDITS : 2, used: [] }; this._set(s); }
       return s;
     },
     async balance() { return { remainingExports: this._state().remaining }; },
