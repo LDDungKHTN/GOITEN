@@ -25,27 +25,54 @@
     return b;
   }
 
-  const normCode = (c) => String(c || '').trim().toUpperCase().replace(/\s+/g, '');
+  // Chuẩn hóa mã: chấp nhận chữ thường, dấu cách, thiếu gạch nối (gs abcd efgh -> GS-ABCD-EFGH)
+  const normCode = (c) => {
+    const s = String(c || '').trim().toUpperCase().replace(/\s+/g, '');
+    const raw = s.replace(/[^A-Z0-9]/g, '');
+    return /^GS[A-Z0-9]{8}$/.test(raw) ? `GS-${raw.slice(2, 6)}-${raw.slice(6)}` : s;
+  };
 
-  /* ---------- DEMO (chỉ thử giao diện) ---------- */
+  /* ---------- Chế độ trên trình duyệt (không cần máy chủ) ----------
+   * Mã kích hoạt được kiểm tra bằng "dấu vân tay" PBKDF2 trong js/code-hashes.js (không chứa mã thật).
+   * Lượt xuất lưu trên trình duyệt; mỗi mã chỉ nạp được 1 lần trên mỗi trình duyệt. */
+  const enc = (s) => new TextEncoder().encode(s);
+  async function codeHash(code, cfg) {
+    const key = await crypto.subtle.importKey('raw', enc(code), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: enc(cfg.salt), iterations: cfg.iter, hash: 'SHA-256' }, key, 256);
+    return Array.from(new Uint8Array(bits)).slice(0, 16).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
   const demo = {
+    KEY: 'gs_local_v2',
     _get() {
-      try { return JSON.parse(localStorage.getItem('gs_demo_state') || 'null'); } catch (e) { return null; }
+      try { return JSON.parse(localStorage.getItem(this.KEY) || 'null'); } catch (e) { return null; }
     },
-    _set(s) { try { localStorage.setItem('gs_demo_state', JSON.stringify(s)); } catch (e) { /* bỏ qua */ } },
+    _set(s) { try { localStorage.setItem(this.KEY, JSON.stringify(s)); } catch (e) { /* bỏ qua */ } },
     _state() {
       let s = this._get();
-      if (!s) { s = { remaining: C.DEMO_START_CREDITS != null ? C.DEMO_START_CREDITS : 2, used: [] }; this._set(s); }
+      if (!s) { s = { remaining: C.DEMO_START_CREDITS != null ? C.DEMO_START_CREDITS : 5, used: [] }; this._set(s); }
       return s;
     },
     async balance() { return { remainingExports: this._state().remaining }; },
     async redeem(code) {
       const s = this._state(); code = normCode(code);
-      const credits = (C.DEMO_CODES || {})[code];
-      if (!credits) return { success: false, message: 'Mã kích hoạt không tồn tại.', remainingExports: s.remaining };
-      if (s.used.includes(code)) return { success: false, message: 'Mã này đã được sử dụng.', remainingExports: s.remaining };
-      s.used.push(code); s.remaining += credits; this._set(s);
-      return { success: true, message: `Nạp thành công ${credits} lượt xuất (chế độ DEMO).`, addedCredits: credits, remainingExports: s.remaining };
+      const cfg = root.GS_CODES;
+      if (!code) return { success: false, message: 'Vui lòng nhập mã kích hoạt.', remainingExports: s.remaining };
+      if (!cfg || !cfg.hashes || !cfg.hashes.length || !(root.crypto && crypto.subtle)) {
+        return { success: false, message: 'Trang chưa sẵn sàng kiểm tra mã. Vui lòng tải lại trang.', remainingExports: s.remaining };
+      }
+      // chống dò mã: tối đa 10 lần sai liên tiếp mỗi 10 phút
+      const now = Date.now();
+      s.fails = (s.fails || []).filter((t) => now - t < 600000);
+      if (s.fails.length >= 10) { this._set(s); return { success: false, message: 'Bạn nhập sai quá nhiều lần. Vui lòng thử lại sau 10 phút.', remainingExports: s.remaining }; }
+      const h = await codeHash(code, cfg);
+      if (!cfg.hashes.includes(h)) {
+        s.fails.push(now); this._set(s);
+        return { success: false, message: 'Mã kích hoạt không đúng. Kiểm tra lại từng ký tự.', remainingExports: s.remaining };
+      }
+      if (s.used.includes(h)) return { success: false, message: 'Mã này đã được sử dụng.', remainingExports: s.remaining };
+      const credits = cfg.credits || 5;
+      s.used.push(h); s.remaining += credits; s.fails = []; this._set(s);
+      return { success: true, message: `Nạp thành công ${credits} lượt xuất!`, addedCredits: credits, remainingExports: s.remaining };
     },
     async consume() {
       const s = this._state();

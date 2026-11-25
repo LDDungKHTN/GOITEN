@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Sinh hàng loạt mã kích hoạt ngẫu nhiên (không trùng, bỏ ký tự dễ nhầm 0 O 1 I L).
- *   node scripts/generate-codes.js --count 50 --credits 30 --prefix SLIDE30 --length 6 --expires 2027-06-30
+ *   node scripts/generate-codes.js --count 50 --credits 5 --prefix SLIDE5 --length 6 --expires 2027-06-30
  * Xuất 3 file vào ./output-codes/: .json, .csv, .sql (dán file .sql vào Supabase > SQL Editor để nạp mã).
  */
 const fs = require('fs');
@@ -25,7 +25,7 @@ if (o.help) {
   process.exit(0);
 }
 const count = Math.max(1, parseInt(o.count, 10) || 50);
-const credits = Math.max(1, parseInt(o.credits, 10) || 30);
+const credits = Math.max(1, parseInt(o.credits, 10) || 5);
 const prefix = String(o.prefix || `SLIDE${credits}`).toUpperCase().replace(/[^A-Z0-9]/g, '');
 const length = Math.min(16, Math.max(4, parseInt(o.length, 10) || 6));
 let expires = null;

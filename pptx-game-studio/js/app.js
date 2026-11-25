@@ -111,10 +111,20 @@
   }
   function renderMode() {
     const m = B.mode();
+    const P = C.PAYMENT || {};
+    const per = C.CREDITS_PER_CODE || 5;
     $('#modeNote').innerHTML = m === 'demo'
-      ? `<b class="demo">Chế độ DEMO</b> – lượt xuất lưu trên trình duyệt này để dùng thử. Mã thử: <code>${esc(Object.keys(C.DEMO_CODES || {})[0] || '')}</code>`
+      ? `🎁 Dùng thử miễn phí <b>${C.DEMO_START_CREDITS || 5} lượt xuất</b>. Soạn bài, xem trước, trình chiếu online luôn miễn phí.
+         Hết lượt? <a data-open-redeem>Mua mã: ${esc((P.prices && P.prices[0] && P.prices[0][1]) || '')} / ${per} lượt</a>`
       : `<b class="live">● Đang kết nối máy chủ</b> – lượt xuất và mã kích hoạt được quản lý an toàn trên máy chủ.`;
-    $('#contactNote').textContent = C.CONTACT || '';
+    const a = $('#modeNote a[data-open-redeem]'); if (a) a.onclick = () => openRedeem();
+    $('#payInfo').innerHTML = P.account ? `<h4>💳 Mua mã kích hoạt (mỗi mã = ${per} lượt xuất file)</h4>
+      <table>${(P.prices || []).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>
+      <div class="acc"><span>Ngân hàng</span><b>${esc(P.bank)}</b><span></span>
+        <span>Số tài khoản</span><b>${esc(P.account)}</b><button class="copy" data-copy="${esc(P.account)}">Sao chép</button>
+        <span>Chủ tài khoản</span><b>${esc(P.holder)}</b><span></span></div>
+      <p class="note">${esc(P.note || '')}</p>` : '';
+    $('#payInfo').querySelectorAll('[data-copy]').forEach((b) => { b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Đã chép'; }; });
     $('#userId').textContent = B.userId().slice(4, 12).toUpperCase();
   }
   function openRedeem(msg) {

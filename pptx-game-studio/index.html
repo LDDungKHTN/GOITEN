@@ -108,9 +108,9 @@
   <div class="dialog">
     <h3>🎟️ Nhập mã kích hoạt</h3>
     <p class="muted">Nhập mã để cộng thêm lượt xuất PowerPoint. Mỗi mã chỉ dùng được một lần.</p>
-    <input id="codeInput" class="code-input" placeholder="VD: SLIDE30-7K9M2X" autocomplete="off" spellcheck="false" maxlength="40">
+    <input id="codeInput" class="code-input" placeholder="VD: GS-ABCD-EFGH" autocomplete="off" spellcheck="false" maxlength="40">
     <div class="msg" id="redeemMsg"></div>
-    <p class="muted small" id="contactNote"></p>
+    <div class="pay" id="payInfo"></div>
     <div class="dlg-actions">
       <button class="btn ghost" data-close>Đóng</button>
       <button class="btn primary" id="btnDoRedeem">Nạp lượt</button>
@@ -202,6 +202,7 @@ Có thể ghi bảng đáp án ở cuối:  ĐÁP ÁN  1-B  2-Sai  4-C</pre>
 <script src="vendor/jszip.min.js"></script>
 <script src="vendor/pptxgen.bundle.js"></script>
 <script src="config.js"></script>
+<script src="js/code-hashes.js"></script>
 <script src="js/backend.js"></script>
 <script src="js/sounds.js"></script>
 <script src="js/raster.js"></script>

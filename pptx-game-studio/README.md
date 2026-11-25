@@ -69,6 +69,17 @@ pptx-game-studio/
 └── HANDOVER_PLAN.md      # Kế hoạch bàn giao gốc
 ```
 
+## Lượt xuất & mã kích hoạt (đang dùng)
+
+- Người dùng mới được **5 lượt xuất miễn phí**. Mỗi mã kích hoạt cộng **5 lượt** (giá và số tài khoản cấu hình
+  trong `config.js` → `PAYMENT`).
+- Trang chỉ chứa `js/code-hashes.js` = "dấu vân tay" PBKDF2 của các mã, **không chứa mã thật**. Danh sách mã thật
+  và trạng thái bán nằm trong file `quan-ly-ma.html` trên máy của thầy (không đưa lên GitHub).
+- Tạo thêm mã: mở `quan-ly-ma.html` → "Tạo thêm mã" → "Tải file code-hashes.js" → chép đè vào `js/` → đẩy lên GitHub.
+- Giới hạn của chế độ không máy chủ: lượt xuất lưu trên trình duyệt; một mã chỉ nạp được 1 lần trên mỗi trình duyệt,
+  nhưng nếu người mua chia sẻ mã cho người khác thì người đó vẫn nạp được trên máy của họ. Muốn chặn hẳn
+  (mỗi mã dùng đúng 1 lần trên toàn hệ thống) cần bật Supabase như hướng dẫn dưới đây (file quản lý có nút xuất SQL).
+
 ## Bật hệ thống mã kích hoạt online (Supabase – miễn phí)
 
 1. Tạo tài khoản và project tại https://supabase.com.
