@@ -146,6 +146,12 @@ input:focus, select:focus, textarea:focus { border-color: var(--ac); box-shadow:
 .pay .acc b { font-size: 15px; letter-spacing: .3px; }
 .pay .copy { border: 1px solid #fcd34d; background: #fff; border-radius: 8px; padding: 2px 8px; cursor: pointer; font-size: 12px; }
 .pay .note { color: #78350f; font-size: 12.5px; margin: 0; }
+.pay .contact { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.pay .ct { flex: 1 1 auto; text-align: center; text-decoration: none; border-radius: 9px; padding: 6px 10px; font-size: 13px; font-weight: 600; white-space: nowrap; }
+.pay .ct.zalo { background: #0068ff; color: #fff; }
+.pay .ct.tel { background: #fff; color: #92400e; border: 1px solid #fcd34d; }
+.pay .ct.fb { background: #1877f2; color: #fff; }
+.pay .ct:hover { filter: brightness(1.08); }
 .mode-note a { color: var(--ac); font-weight: 600; cursor: pointer; }
 .dlg-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
 .cf-body { font-size: 14px; max-height: 50vh; overflow: auto; }

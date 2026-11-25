@@ -122,7 +122,12 @@
       <div class="acc"><span>Ngân hàng</span><b>${esc(P.bank)}</b><span></span>
         <span>Số tài khoản</span><b>${esc(P.account)}</b><button class="copy" data-copy="${esc(P.account)}">Sao chép</button>
         <span>Chủ tài khoản</span><b>${esc(P.holder)}</b><span></span></div>
-      <p class="note">${esc(P.note || '')}</p>` : '';
+      <p class="note">${esc(P.note || '')}</p>
+      ${P.phone || P.facebook ? `<div class="contact">
+        ${P.phone ? `<a class="ct zalo" href="https://zalo.me/${esc(P.phone)}" target="_blank" rel="noopener">💬 Zalo: <b>${esc(P.phone)}</b></a>
+          <a class="ct tel" href="tel:${esc(P.phone)}">📞 Gọi: <b>${esc(P.phone)}</b></a>` : ''}
+        ${P.facebook ? `<a class="ct fb" href="${esc(P.facebook)}" target="_blank" rel="noopener">👍 Nhắn tin Facebook</a>` : ''}
+      </div>` : ''}` : '';
     $('#payInfo').querySelectorAll('[data-copy]').forEach((b) => { b.onclick = () => { navigator.clipboard && navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Đã chép'; }; });
     $('#userId').textContent = B.userId().slice(4, 12).toUpperCase();
   }

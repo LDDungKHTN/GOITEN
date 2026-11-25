@@ -23,6 +23,8 @@ window.GS_CONFIG = {
     account: '8821672343',
     holder: 'LE DINH DUNG',
     prices: [['1 mã (5 lượt xuất)', '10.000đ'], ['2 mã (10 lượt xuất)', '18.000đ'], ['3 mã (15 lượt xuất)', '25.000đ']],
-    note: 'Nội dung chuyển khoản: MUA MA + số lượng mã + tên Facebook/Zalo của bạn (VD: MUA MA 2 NGUYEN VAN A). Sau khi chuyển khoản, nhắn tin cho thầy kèm ảnh chụp giao dịch để nhận mã.'
+    phone: '0944248402',                                   // số điện thoại / Zalo nhận ảnh chuyển khoản
+    facebook: 'https://www.facebook.com/le.dung.35513/',
+    note: 'Nội dung chuyển khoản: MUA MA + số lượng mã + tên Facebook/Zalo của bạn (VD: MUA MA 2 NGUYEN VAN A). Sau khi chuyển khoản, nhắn tin cho thầy qua Zalo hoặc Facebook bên dưới, kèm ảnh chụp giao dịch để nhận mã.'
   }
 };
