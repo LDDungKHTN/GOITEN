@@ -309,6 +309,18 @@
         break;
       case 'picture':
         qs.forEach((q) => (q.image ? pic(q) : skipped.push(q))); break;
+      case 'rescue': case 'fruit': case 'space': {
+        // chỉ dùng câu trắc nghiệm và đúng/sai (đúng/sai thành 2 phương án)
+        const usable = [];
+        qs.forEach((q) => {
+          if (q.kind === 'mcq') usable.push({ question: q.text, answers: [0, 1, 2, 3].map((i) => q.options[i] || ''), correct: q.correct });
+          else if (q.kind === 'tf') usable.push({ question: q.text, answers: ['Đúng', 'Sai', '', ''], correct: q.isTrue === false ? 1 : 0 });
+          else skipped.push(q);
+        });
+        const names = { rescue: 'Giải cứu thú cưng', fruit: 'Hứng hoa quả', space: 'Bảo vệ Trái Đất' };
+        chunk(usable, 8, 1).forEach((c, i, all) => mk(target, { title: all.length > 1 ? `${names[target]} – lượt ${i + 1}` : names[target], questions: c }));
+        break;
+      }
       case 'tiles': case 'puzzle': case 'obstacle':
         group(qs, target); break;
       default: { // tự động

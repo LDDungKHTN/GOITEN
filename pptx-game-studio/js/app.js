@@ -146,6 +146,10 @@
       case 'truefalse': return it.statement;
       case 'tiles': return `${(it.cells || []).length} ô số • ${it.title || ''}`;
       case 'obstacle': return `${(it.steps || []).length} chướng ngại vật • ${it.title || ''}`;
+      case 'rescue': case 'fruit': case 'space': {
+        const qs = it.questions || [];
+        return `${qs.length} câu • ${(qs[0] && qs[0].question) || ''}`;
+      }
     }
     return '';
   }
@@ -174,6 +178,10 @@
         break;
       case 'obstacle':
         if ((it.steps || []).some((c) => blank(c.question))) w.push('còn chướng ngại vật chưa có câu hỏi');
+        break;
+      case 'rescue': case 'fruit': case 'space':
+        if ((it.questions || []).some((q) => blank(q.question))) w.push('còn câu chưa có nội dung');
+        if ((it.questions || []).some((q) => (q.answers || []).filter((a) => !blank(a)).length < 2)) w.push('câu cần ít nhất 2 phương án');
         break;
     }
     return w;
@@ -277,6 +285,23 @@
         h += `<div class="field"><span>Kết luận</span><div class="seg" data-seg="isTrue"><button data-v="true" class="${it.isTrue !== false ? 'on' : ''}">✔ ĐÚNG</button><button data-v="false" class="${it.isTrue === false ? 'on' : ''}">✘ SAI</button></div></div>`;
         h += txt('Giải thích', 'explanation', it.explanation, { multi: true, rows: 2 }) + timerSel(it);
         break;
+      case 'rescue': case 'fruit': case 'space': {
+        if (it.type === 'rescue') h += `<div class="field"><span>Thú cưng bị nhốt</span><div class="seg" data-seg="pet"><button data-v="dog" class="${it.pet !== 'cat' ? 'on' : ''}">🐶 Cún con</button><button data-v="cat" class="${it.pet === 'cat' ? 'on' : ''}">🐱 Mèo con</button></div></div>`;
+        if (it.type === 'fruit') h += `<div class="field"><span>Con vật cầm giỏ</span><div class="seg" data-seg="pet">${['🐻', '🐼', '🐒', '🦊', '🐰', '🐸'].map((a) => `<button data-v="${a}" class="${(it.pet || '🐻') === a ? 'on' : ''}">${a}</button>`).join('')}</div></div>`;
+        const howTo = { rescue: 'Trả lời đúng: mở 1 van thoát nước. Sai: nước dâng thêm 1 mức.', fruit: 'Đúng: quả rơi vào giỏ. Sai: quả thối bị vứt vào thùng rác.', space: 'Đúng: bắn vỡ thiên thạch, tiêu diệt sinh vật lạ. Sai: sinh vật lạ tấn công Trái Đất.' }[it.type];
+        h += `<p class="hint">${howTo} Mỗi câu 2–4 phương án (để trống phương án không dùng). Câu Đúng/Sai: nhập "Đúng" ở A, "Sai" ở B.</p><div class="sub-list">`;
+        it.questions.forEach((q, k) => {
+          h += `<div class="sub"><div class="sub-h">Câu ${k + 1}${it.questions.length > 1 ? `<button class="link" data-q-del="${k}">Xóa câu</button>` : ''}</div>
+            ${txt('Câu hỏi', `questions.${k}.question`, q.question, { multi: true, rows: 2 })}`;
+          ['A', 'B', 'C', 'D'].forEach((L, i) => {
+            h += `<div class="ans-row"><span class="lt">${L}</span><input data-path="questions.${k}.answers.${i}" value="${esc(q.answers[i])}" maxlength="90" placeholder="Phương án ${L}">
+              <label class="ok"><input type="radio" name="corr${k}" data-path="questions.${k}.correct" data-num value="${i}" ${+q.correct === i ? 'checked' : ''}>Đúng</label></div>`;
+          });
+          h += '</div>';
+        });
+        h += `</div>${it.questions.length < 8 ? '<button class="btn sm" style="margin:10px 0" data-q-add>＋ Thêm câu hỏi</button>' : ''}<p class="hint">Từ 1 đến 8 câu, tất cả trên cùng 1 slide. Khi trình chiếu: bấm vào phương án để chấm, bấm ra ngoài để sang câu tiếp.</p>` + timerSel(it);
+        break;
+      }
       case 'tiles': case 'obstacle': {
         const key = it.type === 'tiles' ? 'cells' : 'steps', min = it.type === 'tiles' ? 4 : 3;
         const unit = it.type === 'tiles' ? 'Ô số' : 'Chướng ngại vật';
@@ -311,6 +336,8 @@
       if (key === 'isTrue') v = v === 'true';
       it[key] = v; changed({ editor: true }); return;
     }
+    if ('qAdd' in e.target.dataset) { if (it.questions.length < 8) it.questions.push({ question: '', answers: ['', '', '', ''], correct: 0 }); changed({ editor: true }); return; }
+    if (e.target.dataset.qDel != null) { it.questions.splice(+e.target.dataset.qDel, 1); changed({ editor: true }); return; }
     const listKey = it.type === 'obstacle' ? 'steps' : 'cells';
     if ('cellAdd' in e.target.dataset) { if (it[listKey].length < 8) it[listKey].push({ question: '', answer: '' }); changed({ editor: true }); return; }
     if (e.target.dataset.cellDel != null) { it[listKey].splice(+e.target.dataset.cellDel, 1); changed({ editor: true }); return; }

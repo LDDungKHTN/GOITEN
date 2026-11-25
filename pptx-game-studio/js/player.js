@@ -5,7 +5,7 @@
 (function (root) {
   'use strict';
   const W = 13.333, H = 7.5;
-  const ENTR = new Set(['fadeIn', 'zoomIn', 'floatIn', 'wipeIn']);
+  const ENTR = new Set(['fadeIn', 'zoomIn', 'floatIn', 'wipeIn', 'dropIn']);
   const EXIT = new Set(['fadeOut', 'zoomOut', 'timerOut']);
   const u = (inch) => `${(inch / W) * 100}cqw`;   // inch -> đơn vị theo bề rộng slide
   const pt = (p) => u(p / 72);
@@ -27,6 +27,7 @@
     fadeIn: [{ opacity: 0 }, { opacity: 1 }],
     zoomIn: [{ transform: 'scale(0)', opacity: 0 }, { transform: 'scale(1)', opacity: 1 }],
     floatIn: [{ transform: `translateY(${u(0.75)})`, opacity: 0 }, { transform: 'translateY(0)', opacity: 1 }],
+    dropIn: [{ transform: `translateY(-${u(1.875)})`, opacity: 0, offset: 0 }, { opacity: 1, offset: 0.4 }, { transform: 'translateY(0)', opacity: 1 }],
     wipeIn: [{ clipPath: 'inset(0 100% 0 0)' }, { clipPath: 'inset(0 0 0 0)' }],
     fadeOut: [{ opacity: 1 }, { opacity: 0 }],
     zoomOut: [{ transform: 'scale(1)', opacity: 1 }, { transform: 'scale(0)', opacity: 0 }],
@@ -38,7 +39,7 @@
     up: [{ clipPath: 'inset(0 0 100% 0)' }, { clipPath: 'inset(0 0 0 0)' }],
     down: [{ clipPath: 'inset(100% 0 0 0)' }, { clipPath: 'inset(0 0 0 0)' }]
   };
-  const EASE = { zoomIn: 'cubic-bezier(.2,1.25,.4,1)', floatIn: 'cubic-bezier(.15,.85,.3,1)', zoomOut: 'cubic-bezier(.5,0,.9,.4)', timerOut: 'linear', pulse: 'ease-in-out' };
+  const EASE = { dropIn: 'cubic-bezier(.55,0,1,.45)', zoomIn: 'cubic-bezier(.2,1.25,.4,1)', floatIn: 'cubic-bezier(.15,.85,.3,1)', zoomOut: 'cubic-bezier(.5,0,.9,.4)', timerOut: 'linear', pulse: 'ease-in-out' };
 
   class Player {
     constructor(host, opts) {
@@ -47,14 +48,14 @@
       this.stage = document.createElement('div');
       this.stage.className = 'gs-stage';
       host.appendChild(this.stage);
-      this.deck = null; this.index = 0; this.timers = []; this.anims = []; this.layer = null;
+      this.deck = null; this.index = 0; this.timers = []; this.anims = []; this.pending = []; this.layer = null;
       this.stage.addEventListener('click', (e) => this._onClick(e));
     }
     load(deck, index, o) { this.deck = deck; this.show(index || 0, Object.assign({ transition: false }, o)); }
     get slide() { return this.deck && this.deck.slides[this.index]; }
 
     _clear() {
-      this.timers.forEach(clearTimeout); this.timers = [];
+      this.timers.forEach(clearTimeout); this.timers = []; this.pending = [];
       if (root.GSSounds) root.GSSounds.stopAll();
       this.anims.forEach((a) => { try { a.cancel(); } catch (e) { /* bỏ qua */ } }); this.anims = [];
     }
@@ -170,6 +171,7 @@
     _run(e, instant) {
       const n = this.nodes[e.target]; if (!n) return;
       const isIn = ENTR.has(e.type), isOut = EXIT.has(e.type);
+      if (isOut && n.o.style.visibility === 'hidden') return; // đã ẩn thì không "biến mất" lần nữa
       if (isIn) n.o.style.visibility = 'visible';
       if (instant) { if (isOut) n.o.style.visibility = 'hidden'; return; }
       if (e.snd && root.GSSounds && this.opts.sound !== false) root.GSSounds.play(e.snd);
@@ -191,14 +193,24 @@
       list.forEach((e) => {
         const d = e.delay + (offset || 0);
         if (d <= 0) this._run(e);
-        else this.timers.push(setTimeout(() => this._run(e), d));
+        else {
+          const t = { e, id: 0 };
+          t.id = setTimeout(() => { this.pending = this.pending.filter((x) => x !== t); this._run(e); }, d);
+          this.pending.push(t); this.timers.push(t.id);
+        }
       });
+    }
+    /** Bấm tiếp khi hiệu ứng còn dở: hoàn tất ngay các hiệu ứng đang chờ (giống PowerPoint) */
+    _flush() {
+      const p = this.pending; this.pending = [];
+      p.forEach((t) => { clearTimeout(t.id); this._run(t.e, true); });
+      this.anims.slice().forEach((a) => { try { a.finish(); } catch (e) { /* bỏ qua */ } });
     }
 
     /** Bước tiếp: chạy nhóm hiệu ứng bấm chuột tiếp theo, hết thì sang slide sau. */
     next() {
       const sd = this.slide; if (!sd) return;
-      if (this.mainPos < sd.main.length) { this._play(sd.main[this.mainPos].effects); this.mainPos++; this._emit(); }
+      if (this.mainPos < sd.main.length) { this._flush(); this._play(sd.main[this.mainPos].effects); this.mainPos++; this._emit(); }
       else if (this.index < this.deck.slides.length - 1) this.show(this.index + 1);
       else if (this.opts.onEnd) this.opts.onEnd();
     }

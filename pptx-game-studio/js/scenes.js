@@ -21,7 +21,10 @@
     puzzle: { label: 'Mảnh ghép bí mật', icon: '🧩' },
     truefalse: { label: 'Đúng / Sai', icon: '⚖️' },
     tiles: { label: 'Lật ô số', icon: '🔢' },
-    obstacle: { label: 'Vượt chướng ngại vật', icon: '🏃' }
+    obstacle: { label: 'Vượt chướng ngại vật', icon: '🏃' },
+    rescue: { label: 'Giải cứu thú cưng', icon: '🐶' },
+    fruit: { label: 'Hứng hoa quả', icon: '🍎' },
+    space: { label: 'Bảo vệ Trái Đất', icon: '🌍' }
   };
 
   const TRANSITIONS = ['fade', 'push', 'zoom', 'cover', 'wipe'];
@@ -513,6 +516,229 @@
     return sl;
   }
 
+  /* ============ Nhóm trò nhiều câu trắc nghiệm trên 1 slide (giải cứu, hứng quả, bảo vệ Trái Đất) ============
+   * Mỗi câu là một "nhóm" hình. Bấm ra ngoài (phím →) để chuyển sang câu tiếp theo.
+   * Bấm vào phương án: đúng / sai sẽ chạy hiệu ứng riêng của từng trò. */
+  const LET = 'ABCD';
+  function roundQs(it) {
+    const qs = (it.questions || []).slice(0, 8).map((q) => {
+      const ans = (q.answers || []).map(nfc);
+      let idx = [0, 1, 2, 3].filter((i) => (ans[i] || '').trim());
+      if (idx.length < 2) idx = [0, 1];
+      let c = parseInt(q.correct, 10) || 0;
+      if (!idx.includes(c)) c = idx[0];
+      return { q: nfc(q.question) || '(Chưa nhập câu hỏi)', opts: idx.map((i) => ({ i, t: ans[i] || '' })), correct: c };
+    });
+    if (!qs.length) qs.push({ q: '(Chưa nhập câu hỏi)', opts: [{ i: 0, t: '' }, { i: 1, t: '' }], correct: 0 });
+    return qs;
+  }
+  /**
+   * Dựng phần câu hỏi chung.
+   * cfg.qBox: vị trí khung câu hỏi; cfg.place(k, m, j) -> {x,y,w,h} vị trí phương án thứ j (m phương án) của câu k
+   * cfg.optStyle(k, j, opt) -> thuộc tính hình phương án; cfg.onRight(k, q, j, name) / cfg.onWrong(...) -> mảng hiệu ứng thêm
+   * cfg.intro: hiệu ứng mở đầu (khung cảnh); cfg.finale: hiệu ứng cuối cùng
+   */
+  function quizRounds(sl, qs, cfg) {
+    const groups = [];
+    qs.forEach((q, k) => {
+      const g = [];
+      const qb = cfg.qBox;
+      const qt = `Câu ${k + 1}/${qs.length}: ${q.q}`;
+      sl.add(Object.assign({ name: `Q${k}`, shape: 'roundRect', radius: 0.18, text: qt, size: fit(qt, qb.w - 0.4, qb.h - 0.15, 26, 12), bold: true,
+        color: '1F2937', fill: 'FFFFFF', line: cfg.accent, lineW: 2.5, shadow: true, align: 'center', pad: [14, 14, 4, 4] }, qb));
+      g.push(`Q${k}`);
+      q.opts.forEach((o, j) => {
+        const name = `o${k}_${j}`;
+        const p = cfg.place(k, q.opts.length, j);
+        const label = `${LET[o.i]}. ${o.t}`;
+        sl.add(Object.assign({ name, text: label, size: fit(label, p.w - 0.3, p.h - 0.2, 22, 10), bold: true, color: 'FFFFFF', shadow: true }, p, cfg.optStyle(k, j, o)));
+        g.push(name);
+      });
+      groups.push(g);
+    });
+    (cfg.extraShapes || (() => {}))();
+    const intro = (cfg.intro || []).concat(groups[0].map((n, j) => E(n, j ? 'zoomIn' : 'floatIn', 700 + j * 120, 400, j ? null : 'reveal')));
+    sl.auto(intro);
+    for (let k = 1; k < qs.length; k++) {
+      sl.click(groups[k - 1].map((n) => E(n, 'fadeOut', 0, 300)).concat(cfg.clearShared ? cfg.clearShared(k - 1) : [],
+        groups[k].map((n, j) => E(n, j ? 'zoomIn' : 'floatIn', 350 + j * 110, 400, j ? null : 'reveal'))));
+    }
+    if (cfg.finale) sl.click(groups[qs.length - 1].map((n) => E(n, 'fadeOut', 0, 300)).concat(cfg.clearShared ? cfg.clearShared(qs.length - 1) : [], cfg.finale));
+    qs.forEach((q, k) => q.opts.forEach((o, j) => {
+      const name = `o${k}_${j}`;
+      sl.on(name, o.i === q.correct ? cfg.onRight(k, q, j, name) : cfg.onWrong(k, q, j, name));
+    }));
+    // Bỏ các hình phụ dùng chung (dấu ✔/✘, tia laser, quả thối…) không có hiệu ứng nào tác động,
+    // nếu không chúng sẽ hiện sẵn ngay từ đầu.
+    if (cfg.lazy) {
+      const used = new Set();
+      sl.main.forEach((g) => g.effects.forEach((e) => used.add(e.target)));
+      sl.triggers.forEach((t) => t.effects.forEach((e) => used.add(e.target)));
+      sl.shapes = sl.shapes.filter((s) => !cfg.lazy.test(s.name) || used.has(s.name));
+    }
+  }
+  const optRow = (x0, w0, y, h, gap) => (k, m, j) => { const w = (w0 - (m - 1) * gap) / m; return { x: x0 + j * (w + gap), y, w, h }; };
+
+  /* ---------------- 7. Giải cứu thú cưng ---------------- */
+  function buildRescue(it, ctx) {
+    const sl = new Slide({ key: 'rescue', label: 'Giải cứu thú cưng', bg: '0C4A6E', transition: ctx.transition, itemId: it.id });
+    deco(sl, ['38BDF8', 'FDE047', '22D3EE']);
+    const AC = '38BDF8';
+    header(sl, 'GIẢI CỨU THÚ CƯNG', AC, '0C4A6E', ctx, it.timer);
+    const qs = roundQs(it), n = qs.length;
+    const pet = it.pet === 'cat' ? '🐱' : '🐶';
+    // Căn phòng kín
+    const RX = 0.5, RY = 1.1, RW = 5.4, RH = 5.95, FLOOR = RY + RH - 0.75;
+    sl.add({ name: 'room', shape: 'roundRect', radius: 0.15, x: RX, y: RY, w: RW, h: RH, fill: '475569', line: '94A3B8', lineW: 4, shadow: true });
+    sl.add({ name: 'wnd', shape: 'roundRect', radius: 0.08, x: RX + 0.4, y: RY + 0.9, w: 1.1, h: 0.9, fill: '1E293B', line: 'CBD5E1', lineW: 2, text: '🌙', size: 20 });
+    sl.add({ name: 'pipe', shape: 'rect', x: RX + 2.4, y: RY, w: 0.6, h: 0.35, fill: '64748B', line: '334155', lineW: 1 });
+    sl.add({ name: 'flow', shape: 'rect', x: RX + 2.55, y: RY + 0.35, w: 0.3, h: FLOOR - RY - 0.35, fill: '38BDF8', alpha: 55 });
+    sl.add({ name: 'floor', shape: 'rect', x: RX + 0.1, y: FLOOR, w: RW - 0.2, h: 0.62, fill: '334155' });
+    // Nước dâng: mỗi câu trả lời sai dâng thêm 1 lớp
+    const WH = (FLOOR - RY - 1.0) / n;
+    for (let k = 0; k < n; k++) sl.add({ name: 'W' + k, shape: 'rect', x: RX + 0.1, y: FLOOR - (k + 1) * WH, w: RW - 0.2, h: WH, fill: '0EA5E9', alpha: 45 });
+    // lớp "phòng khô" phủ lên nước khi giải cứu xong (nước rút hết)
+    sl.add({ name: 'dry', shape: 'rect', x: RX + 0.1, y: FLOOR - n * WH, w: RW - 0.2, h: n * WH, fill: '475569' });
+    sl.add({ name: 'pet', shape: 'ellipse', x: RX + RW / 2 - 0.8, y: FLOOR - 1.45, w: 1.6, h: 1.4, fill: 'FDE68A', line: 'F59E0B', lineW: 3, text: pet, size: 50, shadow: true });
+    sl.add({ name: 'sad', kind: 'text', x: RX + RW / 2 + 0.6, y: FLOOR - 1.9, w: 0.8, h: 0.6, text: '💦', size: 24 });
+    // Van thoát nước dưới sàn: mỗi câu đúng mở 1 van
+    const VW = Math.min(0.5, (RW - 0.6) / n - 0.08);
+    for (let k = 0; k < n; k++) {
+      const x = RX + 0.3 + k * ((RW - 0.6) / n) + ((RW - 0.6) / n - VW) / 2;
+      sl.add({ name: 'V' + k, shape: 'ellipse', x, y: FLOOR + 0.1, w: VW, h: VW * 0.8, fill: '1F2937', line: '94A3B8', lineW: 1.5, text: '⛔', size: Math.round(VW * 30) });
+      sl.add({ name: 'VO' + k, shape: 'ellipse', x, y: FLOOR + 0.1, w: VW, h: VW * 0.8, fill: '22C55E', line: 'BBF7D0', lineW: 1.5, text: '✔', size: Math.round(VW * 30), bold: true, color: 'FFFFFF' });
+    }
+    const OC = ['EF4444', '3B82F6', '16A34A', 'D97706'];
+    quizRounds(sl, qs, {
+      accent: AC,
+      qBox: { x: 6.25, y: 1.1, w: 6.6, h: 2.0 },
+      place: (k, m, j) => ({ x: 6.25, y: 3.3 + j * 0.925, w: 6.6, h: 0.78 }),
+      optStyle: (k, j, o) => ({ shape: 'roundRect', radius: 0.18, fill: OC[o.i], line: 'FFFFFF', lineW: 2, align: 'left', pad: [18, 10, 2, 2] }),
+      extraShapes: () => {
+        for (let j = 0; j < 4; j++) {
+          const p = { x: 12.15, y: 3.3 + j * (3.7 / 4) + 0.12, w: 0.6, h: 0.6 };
+          sl.add(Object.assign({ name: 'ok' + j, shape: 'ellipse', fill: '16A34A', line: 'FFFFFF', lineW: 2, text: '✔', size: 20, bold: true }, p));
+          sl.add(Object.assign({ name: 'no' + j, shape: 'ellipse', fill: 'DC2626', line: 'FFFFFF', lineW: 2, text: '✘', size: 20, bold: true }, p));
+        }
+        sl.add({ name: 'goal', shape: 'roundRect', radius: 0.3, x: 3.17, y: 2.6, w: 7.0, h: 1.6, fill: 'FDE047', line: 'FFFFFF', lineW: 4, text: `${pet}  GIẢI CỨU THÀNH CÔNG!`, size: fit('🐶  GIẢI CỨU THÀNH CÔNG!', 6.4, 0.75, 36, 18, 0.72), bold: true, face: FB, color: '0C4A6E', shadow: true, rot: -3 });
+      },
+      lazy: /^(ok|no)\d$/,
+      // dấu ✔/✘ cạnh phương án, tự tắt sau 1,6 giây
+      intro: [E('room', 'zoomIn', 0, 600, 'reveal'), E('pet', 'zoomIn', 400, 500), EW('flow', 'up', 300, 700)],
+      onRight: (k, q, j) => [E(rowBadge('ok', q, j), 'zoomIn', 0, 350, 'correct'), E(rowBadge('ok', q, j), 'zoomOut', 1600, 300), E('VO' + k, 'zoomIn', 300, 450, 'whoosh'), E('pet', 'pulse', 600, 500)],
+      onWrong: (k, q, j) => [E(rowBadge('no', q, j), 'zoomIn', 0, 350, 'wrong'), E(rowBadge('no', q, j), 'zoomOut', 1600, 300), EW('W' + k, 'down', 250, 900),
+        E('sad', 'zoomIn', 300, 300), E('sad', 'zoomOut', 1400, 300), E('pet', 'pulse', 500, 400)],
+      finale: [E('flow', 'fadeOut', 0, 400), EW('dry', 'up', 200, 1200, 'whoosh'), E('goal', 'zoomIn', 1300, 600, 'win'), E('pet', 'pulse', 2000, 600)]
+    });
+    sl.notes = `Giải cứu thú cưng – ${n} câu.\n• Bấm vào phương án học sinh chọn: đúng → mở 1 van thoát nước; sai → nước dâng thêm 1 mức.\n• Bấm ra ngoài (phím →) để sang câu tiếp theo; sau câu cuối, bấm thêm 1 lần để giải cứu thú cưng.`;
+    return sl;
+  }
+  // vị trí dấu ✔/✘ theo hàng: khi có m phương án, hàng j dùng huy hiệu j (đặt cạnh khung phương án)
+  function rowBadge(kind, q, j) { return kind + j; }
+
+  /* ---------------- 8. Hứng hoa quả ---------------- */
+  const FRUITS = ['🍎', '🍊', '🍋', '🍉', '🍇', '🍓', '🍑', '🍐'];
+  function buildFruit(it, ctx) {
+    const sl = new Slide({ key: 'fruit', label: 'Hứng hoa quả', bg: '0F3D2E', transition: ctx.transition, itemId: it.id });
+    deco(sl, ['22C55E', 'FACC15', 'F97316']);
+    const AC = 'FACC15';
+    header(sl, 'HỨNG HOA QUẢ', AC, '0F3D2E', ctx, it.timer);
+    const qs = roundQs(it), n = qs.length;
+    // cây
+    sl.add({ name: 'trunk', shape: 'rect', x: 6.0, y: 3.9, w: 1.33, h: 2.6, fill: '7C4A1E', line: '5B3412', lineW: 2 });
+    sl.add({ name: 'crown1', shape: 'ellipse', x: 0.4, y: 2.05, w: 12.53, h: 2.45, fill: '15803D', shadow: true });
+    sl.add({ name: 'crown2', shape: 'ellipse', x: 1.3, y: 1.85, w: 10.7, h: 1.4, fill: '16A34A' });
+    sl.add({ name: 'ground', shape: 'rect', x: 0, y: 6.5, w: W, h: 1.0, fill: '3F6212' });
+    const BX = 4.9, BY = 5.15;
+    sl.add({ name: 'animal', shape: 'ellipse', x: BX + 0.55, y: BY + 0.55, w: 1.45, h: 1.3, fill: 'FDE68A', line: 'B45309', lineW: 2.5, text: it.pet || '🐻', size: 44, shadow: true });
+    sl.add({ name: 'basket', shape: 'roundRect', radius: 0.15, x: BX, y: BY, w: 2.55, h: 0.7, fill: 'B45309', line: '78350F', lineW: 2.5, text: '🧺 GIỎ', size: 16, bold: true, color: 'FFFFFF' });
+    sl.add({ name: 'bin', shape: 'roundRect', radius: 0.12, x: 11.3, y: 5.55, w: 1.4, h: 1.2, fill: '475569', line: '1F2937', lineW: 2, text: '🗑️', size: 34 });
+    sl.add({ name: 'scl', kind: 'text', x: 0.4, y: 6.55, w: 1.4, h: 0.5, text: 'Đã hứng:', size: 14, bold: true, color: 'FDE047', align: 'left' });
+    for (let k = 0; k < n; k++) sl.add({ name: 'S' + k, shape: 'ellipse', x: 1.75 + k * 0.62, y: 6.55, w: 0.52, h: 0.52, fill: 'FFFFFF', alpha: 15, text: FRUITS[k % FRUITS.length], size: 18 });
+    for (let k = 0; k < n; k++) sl.add({ name: 'SE' + k, shape: 'ellipse', x: 1.75 + k * 0.62, y: 6.55, w: 0.52, h: 0.52, fill: '000000', alpha: 65, line: 'FFFFFF', lineW: 1, dash: true });
+    quizRounds(sl, qs, {
+      accent: AC,
+      qBox: { x: 0.5, y: 1.0, w: 12.33, h: 0.95 },
+      place: (k, m, j) => fruitPlace(m === 2 ? j + 1 : j),
+      optStyle: (k, j, o) => ({ shape: 'ellipse', fill: ['DC2626', 'EA580C', 'CA8A04', '7C3AED'][o.i], line: 'FEF3C7', lineW: 3, runs: [{ t: FRUITS[(k * 4 + j) % FRUITS.length] + ' ', size: 22 }, { t: `${LET[o.i]}. ${o.t}`, bold: true }], pad: [8, 8, 2, 2] }),
+      extraShapes: () => {
+        for (let j = 0; j < 4; j++) {
+          // quả thối tại vị trí phương án j (bố cục 4 quả); khi ít quả hơn dùng vị trí tương ứng
+          sl.add({ name: 'rot' + j, shape: 'ellipse', x: 0, y: 2.4, w: 1.55, h: 1.55, fill: '57534E', line: '292524', lineW: 2, text: '🤢', size: 40 });
+        }
+        sl.add({ name: 'catch', shape: 'ellipse', x: BX + 0.8, y: BY - 0.85, w: 0.95, h: 0.95, fill: 'FDE047', line: 'FFFFFF', lineW: 2, text: '🍎', size: 30, shadow: true });
+        sl.add({ name: 'trash', shape: 'ellipse', x: 11.6, y: 4.75, w: 0.8, h: 0.8, fill: '57534E', line: '292524', lineW: 2, text: '🤢', size: 24 });
+        sl.add({ name: 'goal', shape: 'roundRect', radius: 0.3, x: 3.17, y: 2.55, w: 7.0, h: 1.5, fill: 'FDE047', line: 'FFFFFF', lineW: 4, text: '🧺  THU HOẠCH THÀNH CÔNG!', size: fit('🧺  THU HOẠCH THÀNH CÔNG!', 6.4, 0.75, 36, 18, 0.72), bold: true, face: FB, color: '14532D', shadow: true, rot: -3 });
+      },
+      lazy: /^rot\d$/,
+      intro: [E('crown1', 'zoomIn', 0, 600, 'reveal'), E('animal', 'floatIn', 400, 500)],
+      onRight: (k, q, j, name) => [E(name, 'zoomOut', 0, 350, 'whoosh'), E('catch', 'dropIn', 300, 500, 'pop'), E('catch', 'zoomOut', 1300, 300), E('SE' + k, 'fadeOut', 700, 300, 'correct'), E('S' + k, 'pulse', 1000, 400), E('animal', 'pulse', 800, 400)],
+      onWrong: (k, q, j, name) => [E(rotAt(q, j), 'zoomIn', 0, 350, 'wrong'), E(name, 'fadeOut', 100, 300), E(rotAt(q, j), 'zoomOut', 1000, 300), E('trash', 'dropIn', 1250, 450), E('trash', 'zoomOut', 2200, 300), E('bin', 'pulse', 1500, 400)],
+      clearShared: () => [],
+      finale: [E('goal', 'zoomIn', 300, 600, 'win'), E('animal', 'pulse', 1000, 600)]
+    });
+    // đặt quả thối đúng giữa ô phương án tương ứng
+    sl.shapes.filter((s) => /^rot\d$/.test(s.name)).forEach((s) => { const p = fruitPlace(+s.name.slice(3)); s.x = p.x + (p.w - 1.55) / 2; });
+    sl.notes = `Hứng hoa quả – ${n} câu.\n• Bấm vào quả mang đáp án học sinh chọn: đúng → quả rơi vào giỏ, thêm 1 quả vào hàng "Đã hứng"; sai → quả thối và bị vứt vào thùng rác.\n• Bấm ra ngoài (phím →) để sang câu tiếp theo; sau câu cuối bấm thêm 1 lần để tổng kết.`;
+    return sl;
+  }
+  function rotAt(q, j) { return 'rot' + slot(q, j); }
+  const fruitPlace = (j) => { const m = 4, w = 2.85, x0 = (W - (m * w + (m - 1) * 0.3)) / 2; return { x: x0 + j * (w + 0.3), y: 2.4, w, h: 1.55 }; };
+
+  /* ---------------- 9. Bảo vệ Trái Đất ---------------- */
+  function buildSpace(it, ctx) {
+    const sl = new Slide({ key: 'space', label: 'Bảo vệ Trái Đất', bg: '0B1026', transition: ctx.transition, itemId: it.id });
+    for (let i = 0; i < 26; i++) {
+      const s = 0.04 + (i % 3) * 0.03;
+      sl.add({ name: 'st' + i, shape: 'ellipse', x: (i * 3.71) % 13.1 + 0.1, y: (i * 2.39) % 7.2 + 0.15, w: s, h: s, fill: 'FFFFFF', alpha: 20 + (i % 4) * 15 });
+    }
+    const AC = 'A78BFA';
+    header(sl, 'BẢO VỆ TRÁI ĐẤT', AC, '0B1026', ctx, it.timer);
+    const qs = roundQs(it), n = qs.length;
+    sl.add({ name: 'earth', shape: 'ellipse', x: 4.42, y: 5.45, w: 4.5, h: 4.5, fill: '1D4ED8', line: '60A5FA', lineW: 6, text: '🌍', size: 96, valign: 'top', pad: [0, 0, 0, 6], shadow: true });
+    sl.add({ name: 'shield', shape: 'ellipse', x: 3.95, y: 5.0, w: 5.45, h: 5.45, line: '38BDF8', lineW: 3, dash: true });
+    sl.add({ name: 'ship', kind: 'text', x: 6.17, y: 4.35, w: 1.0, h: 0.9, text: '🚀', size: 40 });
+    const P4 = (j) => { const w = 2.85, x0 = (W - (4 * w + 3 * 0.3)) / 2; return { x: x0 + j * (w + 0.3), y: 2.25, w, h: 1.5 }; };
+    const place = (k, m, j) => P4(m === 2 ? j + 1 : j);
+    quizRounds(sl, qs, {
+      accent: AC,
+      qBox: { x: 0.5, y: 1.0, w: 12.33, h: 1.0 },
+      place,
+      optStyle: () => ({ shape: 'ellipse', fill: '78716C', line: 'D6D3D1', lineW: 3 }),
+      extraShapes: () => {
+        for (let j = 0; j < 4; j++) {
+          const p = P4(j), cx = p.x + p.w / 2;
+          sl.add({ name: 'beam' + j, shape: 'rect', x: cx - 0.06, y: p.y + p.h, w: 0.12, h: 4.4 - (p.y + p.h) + 0.6, fill: 'F43F5E', shadow: true });
+          sl.add({ name: 'boom' + j, shape: 'star5', x: cx - 0.85, y: p.y - 0.1, w: 1.7, h: 1.7, fill: 'FDE047', line: 'F97316', lineW: 3 });
+          sl.add({ name: 'alien' + j, shape: 'ellipse', x: cx - 0.55, y: p.y + 0.2, w: 1.1, h: 1.1, fill: '4ADE80', line: '14532D', lineW: 2, text: '👾', size: 32 });
+        }
+        for (let k = 0; k < n; k++) sl.add({ name: 'inv' + k, kind: 'text', x: 4.6 + (k % 4) * 1.0, y: 5.6 + Math.floor(k / 4) * 0.55, w: 0.9, h: 0.6, text: '👾', size: 26 });
+        sl.add({ name: 'hit', shape: 'ellipse', x: 4.42, y: 5.45, w: 4.5, h: 4.5, fill: 'DC2626', alpha: 45 });
+        sl.add({ name: 'goal', shape: 'roundRect', radius: 0.3, x: 3.17, y: 2.5, w: 7.0, h: 1.5, fill: 'FDE047', line: 'FFFFFF', lineW: 4, text: '🌍  TRÁI ĐẤT AN TOÀN!', size: fit('🌍  TRÁI ĐẤT AN TOÀN!', 6.4, 0.75, 36, 18, 0.72), bold: true, face: FB, color: '1E1B4B', shadow: true, rot: -3 });
+      },
+      lazy: /^(beam|boom|alien)\d$/,
+      intro: [E('earth', 'floatIn', 0, 700, 'reveal'), E('shield', 'zoomIn', 400, 500), E('ship', 'zoomIn', 600, 400)],
+      onRight: (k, q, j, name) => {
+        const s = slot(q, j);
+        return [E('ship', 'pulse', 0, 250), EW('beam' + s, 'down', 0, 250, 'whoosh'), E('beam' + s, 'fadeOut', 450, 250), E('boom' + s, 'zoomIn', 250, 250),
+          E(name, 'zoomOut', 300, 300), E('alien' + s, 'zoomIn', 450, 300), E('boom' + s, 'zoomOut', 650, 250), E('alien' + s, 'zoomOut', 1000, 350, 'correct')];
+      },
+      onWrong: (k, q, j, name) => {
+        const s = slot(q, j), c = slot(q, q.opts.findIndex((o) => o.i === q.correct));
+        return [E('ship', 'pulse', 0, 250), EW('beam' + s, 'down', 0, 250, 'whoosh'), E('beam' + s, 'fadeOut', 450, 250), E('boom' + s, 'zoomIn', 250, 250),
+          E(name, 'zoomOut', 300, 300), E('boom' + s, 'zoomOut', 650, 250), E('alien' + c, 'zoomIn', 800, 300, 'wrong'), E('alien' + c, 'zoomOut', 1400, 300),
+          E('inv' + k, 'dropIn', 1450, 500), E('hit', 'fadeIn', 1750, 200), E('hit', 'fadeOut', 2050, 400), E('earth', 'pulse', 1750, 500)];
+      },
+      clearShared: () => [],
+      finale: [E('shield', 'pulse', 0, 600), E('goal', 'zoomIn', 300, 600, 'win'), E('earth', 'pulse', 1000, 600)]
+    });
+    // Với câu ít phương án, hình chùm tia/nổ dùng vị trí theo bố cục 4 phương án gần nhất
+    sl.notes = `Bảo vệ Trái Đất – ${n} câu.\n• Bấm vào thiên thạch mang đáp án học sinh chọn: tàu bắn tia laser; đúng → thiên thạch vỡ, sinh vật ngoài hành tinh bị tiêu diệt; sai → sinh vật trong thiên thạch đúng bay xuống tấn công Trái Đất.\n• Bấm ra ngoài (phím →) để sang câu tiếp theo; sau câu cuối bấm thêm 1 lần để tổng kết.`;
+    return sl;
+  }
+  // Phương án luôn nằm ở 1 trong 4 ô cố định: câu 2 phương án (Đúng/Sai) dùng 2 ô giữa
+  function slot(q, j) { return q.opts.length === 2 ? j + 1 : j; }
+
   /* ---------------- slide kết thúc ---------------- */
   function buildEnd(project) {
     const sl = new Slide({ key: 'end', label: 'Kết thúc', bg: '1E1B4B', transition: 'zoom' });
@@ -534,7 +760,8 @@
     return sl;
   }
 
-  const BUILDERS = { millionaire: buildMillionaire, picture: buildPicture, puzzle: buildPuzzle, truefalse: buildTrueFalse, tiles: buildTiles, obstacle: buildObstacle };
+  const BUILDERS = { millionaire: buildMillionaire, picture: buildPicture, puzzle: buildPuzzle, truefalse: buildTrueFalse, tiles: buildTiles, obstacle: buildObstacle,
+    rescue: buildRescue, fruit: buildFruit, space: buildSpace };
 
   /** Dựng toàn bộ bài trình chiếu từ project (chỉ các mục includedInExport). */
   function buildDeck(project) {
@@ -557,6 +784,9 @@
       case 'puzzle': return Object.assign(base, { image: '', pieceCount: 4, keyword: '', pieces: [0, 1, 2, 3].map(() => ({ question: '', answer: '' })) });
       case 'truefalse': return Object.assign(base, { statement: '', isTrue: true, explanation: '', timer: 15 });
       case 'tiles': return Object.assign(base, { title: 'Chọn một ô số bất kỳ!', cells: [0, 1, 2, 3].map(() => ({ question: '', answer: '' })) });
+      case 'rescue': case 'fruit': case 'space':
+        return Object.assign(base, { pet: type === 'rescue' ? 'dog' : type === 'fruit' ? '🐻' : undefined,
+          questions: [0, 1, 2].map(() => ({ question: '', answers: ['', '', '', ''], correct: 0 })) });
       case 'obstacle': return Object.assign(base, { title: 'Vượt qua tất cả chướng ngại vật để về đích!', steps: [0, 1, 2, 3].map(() => ({ question: '', answer: '' })) });
     }
     return base;

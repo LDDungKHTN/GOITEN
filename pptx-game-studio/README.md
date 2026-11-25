@@ -30,6 +30,21 @@ Ai là triệu phú · Nhìn hình đoán chữ · Mảnh ghép bí mật · Đ�
   đánh dấu "bản cuối" và có dấu bản quyền mờ — người nhận không sửa câu hỏi hay sao chép bố cục để tự làm lại được,
   trong khi hiệu ứng, trigger, âm thanh vẫn chạy.
 
+## Trò chơi từ Đấu trường Tri thức (bản 3)
+
+Ba trò lấy ý tưởng từ https://lddungkhtn.github.io/ chuyển thành dạng PowerPoint: mỗi trò là 1 slide chứa 1–8 câu
+trắc nghiệm (2–4 phương án, câu Đúng/Sai dùng 2 phương án). Bấm vào phương án để chấm; bấm ra ngoài (phím →) sang câu
+tiếp; sau câu cuối bấm thêm 1 lần để xem màn kết thúc.
+
+- **🐶 Giải cứu thú cưng:** cún con / mèo con bị nhốt trong phòng, nước đổ từ trần. Đúng: mở thêm 1 van thoát nước.
+  Sai: nước dâng thêm 1 mức. Kết thúc: nước rút, "Giải cứu thành công!".
+- **🍎 Hứng hoa quả:** các quả mang đáp án treo trên cây, con vật cầm giỏ phía dưới. Đúng: quả rơi vào giỏ, thêm 1 quả
+  vào hàng "Đã hứng". Sai: quả thối và bị vứt vào thùng rác.
+- **🌍 Bảo vệ Trái Đất:** các thiên thạch mang đáp án lơ lửng trên Trái Đất. Đúng: tàu bắn laser, thiên thạch vỡ,
+  sinh vật ngoài hành tinh bị tiêu diệt. Sai: sinh vật trong thiên thạch đúng lao xuống tấn công Trái Đất.
+
+Nhập từ Word / ảnh cũng chuyển được câu trắc nghiệm và Đúng/Sai thẳng vào 3 trò này.
+
 ## Cấu trúc
 
 ```text

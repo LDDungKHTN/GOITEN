@@ -77,7 +77,26 @@
       { question: 'Hành tinh nào được gọi là “Hành tinh Đỏ”?', answer: 'Sao Hỏa' },
       { question: 'Vệ tinh tự nhiên của Trái Đất là gì?', answer: 'Mặt Trăng' },
       { question: 'Hành tinh nào có vành đai rõ và đẹp nhất?', answer: 'Sao Thổ' }] });
-    return { title: 'Ôn tập Khoa học tự nhiên', subtitle: '6 trò chơi tương tác • Bấm vào tên trò chơi để bắt đầu', items: [a, b, c, d, e, f] };
+    const Q = (question, answers, correct) => ({ question, answers: answers.concat(['', '', '', '']).slice(0, 4), correct });
+    const g = N('rescue');
+    Object.assign(g, { timer: 15, questions: [
+      Q('Đơn vị đo khối lượng trong hệ SI là gì?', ['Gam', 'Kilôgam', 'Tấn', 'Lạng'], 1),
+      Q('Nước đóng băng ở nhiệt độ nào?', ['0 °C', '10 °C', '100 °C', '-10 °C'], 0),
+      Q('Tế bào là đơn vị cơ bản của sự sống.', ['Đúng', 'Sai'], 0),
+      Q('Vật nào sau đây là vật sống?', ['Hòn đá', 'Cái bàn', 'Con mèo', 'Chiếc xe'], 2)] });
+    const h = N('fruit');
+    Object.assign(h, { timer: 15, questions: [
+      Q('Cơ quan nào giúp cây hút nước từ đất?', ['Lá', 'Rễ', 'Hoa', 'Quả'], 1),
+      Q('Chất khí cây xanh thải ra khi quang hợp là', ['Oxygen', 'Carbon dioxide', 'Nitrogen', 'Hydrogen'], 0),
+      Q('Quả chuối chín có vị gì?', ['Chua', 'Đắng', 'Ngọt', 'Mặn'], 2),
+      Q('Hạt nằm bên trong quả.', ['Đúng', 'Sai'], 0)] });
+    const s = N('space');
+    Object.assign(s, { timer: 15, questions: [
+      Q('Ngôi sao gần Trái Đất nhất là', ['Sao Bắc Cực', 'Mặt Trời', 'Sao Kim', 'Sao Hôm'], 1),
+      Q('Mặt Trăng là vệ tinh tự nhiên của hành tinh nào?', ['Sao Hỏa', 'Sao Mộc', 'Trái Đất', 'Sao Thủy'], 2),
+      Q('Trái Đất tự quay quanh trục theo hướng nào?', ['Tây sang Đông', 'Đông sang Tây', 'Bắc xuống Nam', 'Nam lên Bắc'], 0),
+      Q('Mặt Trời mọc ở phía Tây.', ['Đúng', 'Sai'], 1)] });
+    return { title: 'Ôn tập Khoa học tự nhiên', subtitle: '9 trò chơi tương tác • Bấm vào tên trò chơi để bắt đầu', items: [a, b, c, d, e, f, g, h, s] };
   }
 
   root.GSSamples = { sampleProject };

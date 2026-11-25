@@ -13,7 +13,7 @@
   'use strict';
   const F = 'Segoe UI';
 
-  const ENTR = { fadeIn: 1, zoomIn: 1, floatIn: 1, wipeIn: 1 };
+  const ENTR = { fadeIn: 1, zoomIn: 1, floatIn: 1, wipeIn: 1, dropIn: 1 };
   const EXIT = { fadeOut: 1, zoomOut: 1, timerOut: 1 };
 
   function addShape(slide, sh) {
@@ -90,6 +90,8 @@
         inner = setVis('visible', 0) + prop('ppt_w', 0, '#ppt_w', dur) + prop('ppt_h', 0, '#ppt_h', dur) + fx('in', 'fade', dur); extra = ' decel="50000"'; break;
       case 'floatIn': preset = 42; cls = 'entr';
         inner = setVis('visible', 0) + fx('in', 'fade', dur) + prop('ppt_x', '#ppt_x', '#ppt_x', dur) + prop('ppt_y', '#ppt_y+.1', '#ppt_y', dur); extra = ' decel="100000"'; break;
+      case 'dropIn': preset = 42; cls = 'entr'; // rơi từ trên xuống
+        inner = setVis('visible', 0) + fx('in', 'fade', Math.round(dur / 2)) + prop('ppt_x', '#ppt_x', '#ppt_x', dur) + prop('ppt_y', '#ppt_y-.25', '#ppt_y', dur); extra = ' accel="60000"'; break;
       case 'wipeIn': { const d = WIPE_SUB[e.dir] ? e.dir : 'left'; preset = 22; cls = 'entr'; sub = WIPE_SUB[d]; inner = setVis('visible', 0) + fx('in', `wipe(${d})`, dur); break; }
       case 'fadeOut': preset = 10; cls = 'exit'; inner = fx('out', 'fade', dur) + setVis('hidden', dur - 1); break;
       case 'zoomOut': preset = 53; cls = 'exit'; sub = 32; extra = ' accel="50000"';
