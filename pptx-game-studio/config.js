@@ -12,8 +12,8 @@
  */
 window.GS_CONFIG = {
   BACKEND: 'auto',
-  SUPABASE_URL: '',
-  SUPABASE_ANON_KEY: '',
+  SUPABASE_URL: 'https://hazyoekkxzortmegfyud.supabase.co',
+  SUPABASE_ANON_KEY: 'sb_publishable_koVSmGDSTqCI2VofPMV5BQ__8dKuB2B', // khóa publishable (công khai được)
   API_BASE: '',
   DEMO_START_CREDITS: 5,   // số lượt xuất miễn phí khi dùng thử
   CREDITS_PER_CODE: 5,     // mỗi mã kích hoạt cộng 5 lượt

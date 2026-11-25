@@ -69,7 +69,14 @@ pptx-game-studio/
 └── HANDOVER_PLAN.md      # Kế hoạch bàn giao gốc
 ```
 
-## Lượt xuất & mã kích hoạt (đang dùng)
+## Lượt xuất & mã kích hoạt
+
+**Đang dùng Supabase** (project `pptx-game-studio`, vùng Singapore): mỗi mã chỉ nạp được đúng 1 lần trên toàn hệ thống,
+lượt xuất lưu trên máy chủ. Thêm mã mới: trong `quan-ly-ma.html` bấm "Xuất SQL (Supabase)" rồi chạy file đó trong
+Supabase → SQL Editor. Nếu bỏ trống `SUPABASE_URL` trong `config.js`, trang tự quay về chế độ kiểm tra mã trên trình
+duyệt mô tả dưới đây.
+
+### Chế độ không máy chủ (dự phòng)
 
 - Người dùng mới được **5 lượt xuất miễn phí**. Mỗi mã kích hoạt cộng **5 lượt** (giá và số tài khoản cấu hình
   trong `config.js` → `PAYMENT`).

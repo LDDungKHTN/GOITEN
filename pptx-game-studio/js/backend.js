@@ -85,11 +85,10 @@
   /* ---------- SUPABASE (gọi stored function qua REST RPC) ---------- */
   async function rpc(fn, body) {
     const url = C.SUPABASE_URL.replace(/\/+$/, '') + '/rest/v1/rpc/' + fn;
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', apikey: C.SUPABASE_ANON_KEY, Authorization: 'Bearer ' + C.SUPABASE_ANON_KEY },
-      body: JSON.stringify(body)
-    });
+    const headers = { 'Content-Type': 'application/json', apikey: C.SUPABASE_ANON_KEY };
+    // khóa anon kiểu cũ là JWT (eyJ…) thì gửi kèm Authorization; khóa publishable mới chỉ cần apikey
+    if (/^eyJ/.test(C.SUPABASE_ANON_KEY)) headers.Authorization = 'Bearer ' + C.SUPABASE_ANON_KEY;
+    const r = await fetch(url, { method: 'POST', headers, body: JSON.stringify(body) });
     const data = await r.json().catch(() => null);
     if (!r.ok) throw new Error((data && (data.message || data.hint)) || ('Lỗi máy chủ (' + r.status + ')'));
     return Array.isArray(data) ? data[0] : data;

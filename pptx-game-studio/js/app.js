@@ -113,10 +113,9 @@
     const m = B.mode();
     const P = C.PAYMENT || {};
     const per = C.CREDITS_PER_CODE || 5;
-    $('#modeNote').innerHTML = m === 'demo'
-      ? `🎁 Dùng thử miễn phí <b>${C.DEMO_START_CREDITS || 5} lượt xuất</b>. Soạn bài, xem trước, trình chiếu online luôn miễn phí.
-         Hết lượt? <a data-open-redeem>Mua mã: ${esc((P.prices && P.prices[0] && P.prices[0][1]) || '')} / ${per} lượt</a>`
-      : `<b class="live">● Đang kết nối máy chủ</b> – lượt xuất và mã kích hoạt được quản lý an toàn trên máy chủ.`;
+    $('#modeNote').innerHTML = `🎁 Dùng thử miễn phí <b>${C.DEMO_START_CREDITS || 5} lượt xuất</b>. Soạn bài, xem trước, trình chiếu online luôn miễn phí.
+         Hết lượt? <a data-open-redeem>Mua mã: ${esc((P.prices && P.prices[0] && P.prices[0][1]) || '')} / ${per} lượt</a>` +
+      (m === 'demo' ? '' : ` <span class="live" title="Lượt xuất và mã kích hoạt được quản lý trên máy chủ">● Đã kết nối máy chủ</span>`);
     const a = $('#modeNote a[data-open-redeem]'); if (a) a.onclick = () => openRedeem();
     $('#payInfo').innerHTML = P.account ? `<h4>💳 Mua mã kích hoạt (mỗi mã = ${per} lượt xuất file)</h4>
       <table>${(P.prices || []).map(([k, v]) => `<tr><td>${esc(k)}</td><td>${esc(v)}</td></tr>`).join('')}</table>
